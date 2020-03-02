@@ -1,0 +1,202 @@
+---
+
+# Isolate the namespace, allowing all traffic in the namespace but not from outside
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-from-other-namespaces
+spec:
+  podSelector:
+    matchLabels:
+  ingress:
+  - from:
+    - podSelector: {}
+  policyTypes:
+  - Ingress
+
+---
+
+# Allow traffic from istio-system
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-from-istio-system
+spec:
+  podSelector:
+    matchLabels:
+  ingress:
+#  - ports:
+#    - port: 80
+#      protocol: TCP
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system
+  policyTypes:
+  - Ingress
+
+---
+
+# Allow traffic from knative-serving
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-from-knative-serving
+spec:
+  podSelector:
+    matchLabels:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: knative-serving
+  policyTypes:
+  - Ingress
+
+---
+
+# allow egress to namespace
+
+#kind: NetworkPolicy
+#apiVersion: networking.k8s.io/v1
+#metadata:
+#  name: allow-egress-to-ns
+#spec:
+#  egress:
+#  - to:
+#    - podSelector: {}
+#  podSelector:
+#    matchLabels:
+#  policyTypes:
+#  - Egress
+
+---
+
+# limit egress traffic to DNS resolving only on ns kube-system, no outside DNS!
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-dns-egress
+spec:
+  egress:
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+  podSelector:
+    matchLabels:
+  policyTypes:
+  - Egress
+
+---
+
+# allow web egress traffic
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-web-egress
+spec:
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+#    - port: 80
+#      protocol: TCP
+  podSelector:
+    matchLabels:
+  policyTypes:
+  - Egress
+
+---
+
+# allow monitoring egress
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-monitoring-egress
+spec:
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+#  - to:
+#    - namespaceSelector:
+#        matchLabels:
+#          name: istio-system
+#    ports:
+#      - port: 9090
+#        protocol: TCP
+  podSelector:
+    matchLabels:
+  policyTypes:
+  - Egress
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-istio-egress
+spec:
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system
+#    ports:
+#      - port: 9090
+#        protocol: TCP
+  podSelector:
+    matchLabels:
+  policyTypes:
+  - Egress
+
+---
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-shared-egress
+spec:
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: shared
+  podSelector:
+    matchLabels:
+  policyTypes:
+  - Egress
+
+---
+
+#kind: NetworkPolicy
+#apiVersion: networking.k8s.io/v1
+#metadata:
+#  name: allow-otomi-api-egress
+#spec:
+#  egress:
+#  - to:
+#    - namespaceSelector:
+#        matchLabels:
+#          name: otomi-api
+#  podSelector:
+#    matchLabels:
+#  policyTypes:
+#  - Egress
+
