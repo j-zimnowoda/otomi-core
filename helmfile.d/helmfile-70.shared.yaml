@@ -38,3 +38,7 @@ releases:
     namespace: shared
     <<: *default
     chart: ../charts/redis
+  - name: jwt-to-rbac
+    installed: {{ $c | get "jwt-to-rbac.enabled" true }}
+    namespace: shared
+    <<: *default

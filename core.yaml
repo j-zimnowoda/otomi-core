@@ -60,6 +60,12 @@ services:
     ownHost: true
     hide: true
     isShared: true
+  - name: kube-auth
+    namespace: shared
+    svc: jwt-to-rbac
+    ownHost: true
+    isShared: true
+    hide: true
   - name: otomi
     namespace: shared
     ownHost: true
