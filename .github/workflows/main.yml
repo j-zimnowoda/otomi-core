@@ -15,7 +15,7 @@ env:
   DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_OTOMI_TOKEN }}
 
 jobs:
-  build-test-push-tag:
+  release:
     if: |
       ((contains(github.event.head_commit.message, 'chore(release)') 
       && github.ref == 'refs/heads/master')

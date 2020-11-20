@@ -1,0 +1,41 @@
+name: Build & perform integration tests
+
+on:
+  workflow_run:
+    workflows: 
+    - "Build Docker & release" 
+
+jobs:
+  test:
+
+    runs-on: ${{ matrix.os }} 
+
+    strategy:
+        matrix:
+          os: [ ubuntu-latest, windows-latest, macos-latest ]
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2 
+
+    - name: Setup BATS
+      run: npm install bats
+
+    - name: Default build & test
+      run: |
+        npm install && \
+        npm run spellcheck && \
+        bin/validate-values.sh && \
+        bin/validate-templates.sh || true
+
+    - name: Test
+      run: bats -r .
+  # test:
+  #   strategy:
+  #       matrix:
+  #         os: [ ubuntu-latest, windows-latest, macos-latest ]
+  #   runs-on: ubuntu-latest # [ self-hosted, linux, ARM32 ]
+  #   steps:
+  #   - name: Checkout
+  #     uses: actions/checkout@v2 # necessary to access files in the repository
+    
