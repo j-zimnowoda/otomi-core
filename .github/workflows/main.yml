@@ -15,14 +15,50 @@ env:
   DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_OTOMI_TOKEN }}
 
 jobs:
+  build:
+
+      runs-on: ${{ matrix.os }} 
+
+      strategy:
+          matrix:
+            os: [ ubuntu-latest, windows-latest, macos-latest ]
+
+      steps:
+      - name: Checkout
+        uses: actions/checkout@v2 
+      - name: Build
+        run: |
+          npm install && \
+          npm run spellcheck && \
+          bin/validate-values.sh && \
+          bin/validate-templates.sh || true
+
+  test: 
+    runs-on: ${{ matrix.os }} 
+
+    strategy:
+        matrix:
+          os: [ ubuntu-latest, windows-latest, macos-latest ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2 
+      - name: Setup BATS
+        run: npm install bats
+      - name: Test
+        run: bats -r .
+
   release:
+
+    runs-on: ubuntu-latest
+
     if: |
       ((contains(github.event.head_commit.message, 'chore(release)') 
       && github.ref == 'refs/heads/master')
         || !contains(github.event.head_commit.message, 'chore(release)')) 
       && !contains(github.event.head_commit.message, 'ci skip') 
       && !startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
+      
     steps:
       - name: Set env
         run: |
