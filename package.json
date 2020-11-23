@@ -13,6 +13,7 @@
     "@commitlint/cli": "^11.0.0",
     "@commitlint/config-conventional": "^11.0.0",
     "@hkdobrev/run-if-changed": "^0.3.1",
+    "bats": "^1.2.1",
     "commitizen": "^4.2.2",
     "cspell": "^4.1.2",
     "cz-conventional-changelog": "^3.3.0",
@@ -70,5 +71,8 @@
       "tag": true
     }
   },
-  "version": "0.11.40"
+  "version": "0.11.40",
+  "dependencies": {
+    "husky-run": "^0.0.0"
+  }
 }
