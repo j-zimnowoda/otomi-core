@@ -1,0 +1,58 @@
+{{- $v := .Environment.Values }}
+{{- $k := $v.charts | get "keycloak" dict }}
+
+replicaCount: 1
+port:
+  name: http
+  containerPort: 5555
+  protocol: TCP
+
+service:
+  type: ClusterIP
+  port: 5555
+
+config:
+  app:
+    addr: ":5555"
+  log:
+    level: "info"
+    format: "json"
+    noColor: true
+  tokenhandler:
+    caCertPath: ""
+    dex:
+      clientID: "{{ $k.idp.clientID }}"
+      issuerURL: "https://keycloak.{{ $v.cluster.domain }}/realms/master"
+
+  rbachandler:
+    githubOrg: ""
+    customGroups:
+    - groupName: team-admin
+      customRules:
+      - verbs: [ '*' ]
+        resources: [ '*' ]
+        apiGroups: [ "", "*" ]
+      # namespaces: ["team-admin"]
+    # TODO iterate over teams and add them here
+    - groupName: team-otomi
+      customRules:
+      - verbs: [ "get", "list" ]
+        resources: [ "deployments", "replicasets", "pods" ]
+        apiGroups: [ "", "extensions", "apps" ]
+      namespaces: ["team-otomi"]
+      
+    # kubeConfig: "/Users/poke/.kube/config"
+
+resources:
+  limits:
+   cpu: 100m
+   memory: 128Mi
+  requests:
+   cpu: 100m
+   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
