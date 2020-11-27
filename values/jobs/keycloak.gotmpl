@@ -34,6 +34,8 @@ tasks:
       pullPolicy: {{ $c | get "jobs.keycloak.image.pullPolicy" "IfNotPresent" }}
     env:
       KEYCLOAK_THEME_LOGIN: {{ $k | get "theme" "default" }}
+      IDP_JWT_TO_RBAC_CLAIM_NAME: '{"connector_id": "local", "user_id": "not_applicable"}'
+      IDP_JWT_TO_RBAC_CLAIM_VALUE: 'federated_claims'
     secret:
       # DEBUG: '*'
       KEYCLOAK_ADDRESS: https://keycloak.{{ $v.cluster.domain }}
@@ -58,6 +60,7 @@ tasks:
           {{- range $name, $team := $teams }}
           "https://apps.team-{{ $name }}.{{ $v.cluster.domain }}/*",
           {{- end }}
-          "https://harbor.{{ $v.cluster.domain }}/*"
+          "https://harbor.{{ $v.cluster.domain }}/*",
+          "http://127.0.0.1/"
       ]'
     script: {{ if $skipVerify }}export NODE_EXTRA_CA_CERTS=/fakeroot.pem && {{ end }}npm run tasks:keycloak
