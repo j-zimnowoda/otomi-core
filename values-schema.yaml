@@ -1,12 +1,17 @@
 ---
-$id: '0.1.0'
+$id: '0.2.0'
 $schema: 'http://json-schema.org/draft-07/schema'
 additionalProperties: false
 changes:
-  displacements: null
-  deletions: null
-  forwardMutations: null
-  backwardMutations: null
+  displacements:
+    charts.president.lastName: charts.cert-manager.president.lastName
+  deletions:
+    charts.president.firstName: charts.cert-manager.president.firstName
+  forwardMutations:
+    # lastName went from semver to glob in Cyberpunk 2077
+    charts.cert-manager.president.lastName: 'printf "v%s"'
+  backwardMutations:
+    charts.cert-manager.president.lastName: 'replace "v" ""'
 definitions:
   alerts:
     properties:
@@ -668,15 +673,15 @@ properties:
   charts:
     additionalProperties: false
     properties:
-      president:
-        properties:
-          firstName:
-            type: string
-          lastName:
-            type: string
       cert-manager:
         additionalProperties: false
         properties:
+          president:
+            properties:
+              firstName:
+                type: string
+              lastName:
+                type: string
           azureClientSecret:
             type: string
           email:
