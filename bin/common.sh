@@ -8,16 +8,18 @@ readonly helmfileOutputHideTpl="(^[\W^-]+$|skipping|basePath=|Decrypting)"
 readonly replacePathsPattern="s@../env@${ENV_DIR}@g"
 
 get_k8s_version() {
-  yq r $clustersFile "clouds.$CLOUD.clusters.$CLUSTER.k8sVersion"
+  # double quotes needed for variables!
+  yq e ".clouds.$CLOUD.clusters.$CLUSTER.k8sVersion" $clustersFile
 }
 
 otomi_image_tag() {
-  local otomiVersion=$(yq r $clustersFile "clouds.$CLOUD.clusters.$CLUSTER.otomiVersion")
+  # double quotes needed for variables!
+  local otomiVersion=$(yq e ".clouds.$CLOUD.clusters.$CLUSTER.otomiVersion" $clustersFile)
   [[ -n $otomiVersion ]] && echo $otomiVersion || echo 'latest'
 }
 
 customer_name() {
-  yq r $otomiSettings "customer.name"
+  yq e '.customer.name' $otomiSettings
 }
 
 check_sops_file() {
@@ -35,7 +37,7 @@ hf() {
 hf_values() {
   [ "${VERBOSE-'false'}" = 'false' ] && quiet='--quiet'
   helmfile ${quiet-} -e "$CLOUD-$CLUSTER" -f helmfile.tpl/helmfile-dump.yaml build | grep -Ev $helmfileOutputHide | sed -e $replacePathsPattern |
-    yq read -P - 'releases[0].values[0]'
+    yq e '.releases[0].values[0]' -
 }
 
 prepare_crypt() {
@@ -50,9 +52,10 @@ for_each_cluster() {
   executable=$1
   [[ -z "$executable" ]] && echo "ERROR: the positional argument is not set"
   local clustersPath="$ENV_DIR/env/clusters.yaml"
-  clouds=$(yq r -j $clustersPath clouds | jq -rc '.|keys[]')
+  clouds=$(yq -j e '.clouds' $clustersPath | jq -rc '.|keys[]')
   for cloud in $clouds; do
-    clusters=($(yq r -j $clustersPath clouds.${cloud}.clusters | jq -rc '. | keys[]'))
+    # double quotes needed for variables!
+    clusters=($(yq -j e ".clouds.${cloud}.clusters" $clustersPath | jq -rc '. | keys[]'))
     for cluster in "${clusters[@]}"; do
       CLOUD=$cloud CLUSTER=$cluster $executable
     done

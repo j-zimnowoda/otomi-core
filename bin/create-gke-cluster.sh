@@ -8,10 +8,10 @@ readonly CLUSTER
 readonly METERING_SET=${METERING_SET:-otomi_metering}
 readonly VERBOSE=${VERBOSE:-0}
 
-readonly PROJECT_ID=${PROJECT_ID:-$(yq read $ENV_DIR/env/clusters.yaml google.projectId)}
-readonly GOOGLE_REGION=${GOOGLE_REGION:-$(yq read $ENV_DIR/env/clusters.yaml clouds.google.clusters.$CLUSTER.region)}
-readonly CUSTOMER=${CUSTOMER:-$(yq read $ENV_DIR/env/settings.yaml customer.name)}
-readonly K8S_VERSION=${K8S_VERSION:-$(yq read $ENV_DIR/env/clusters.yaml clouds.google.clusters.$CLUSTER.k8sVersion)}
+readonly PROJECT_ID=${PROJECT_ID:-$(yq e '.google.projectId' $ENV_DIR/env/clusters.yaml)}
+readonly GOOGLE_REGION=${GOOGLE_REGION:-$(yq e '.clouds.google.clusters.$CLUSTER.region' $ENV_DIR/env/clusters.yaml)}
+readonly CUSTOMER=${CUSTOMER:-$(yq e '.customer.name' $ENV_DIR/env/settings.yaml)}
+readonly K8S_VERSION=${K8S_VERSION:-$(yq e '.clouds.google.clusters.$CLUSTER.k8sVersion' $ENV_DIR/env/clusters.yaml)}
 
 print_envs() {
   echo "ENV_DIR: $ENV_DIR"

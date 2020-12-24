@@ -3,9 +3,9 @@ set -euo pipefail
 
 ENV_DIR=${ENV_DIR:-'./env'}
 
-readonly project=$(yq read $ENV_DIR/env/clusters.yaml clouds.google.projectId)
-readonly google_region=$(yq read $ENV_DIR/env/clusters.yaml clouds.google.clusters.$CLUSTER.region)
-readonly customer=$(yq read $ENV_DIR/env/settings.yaml customer.name)
+readonly project=$(yq e '.clouds.google.projectId' $ENV_DIR/env/clusters.yaml)
+readonly google_region=$(yq e '.clouds.google.clusters.$CLUSTER.region' $ENV_DIR/env/clusters.yaml)
+readonly customer=$(yq e '.customer.name' $ENV_DIR/env/settings.yaml)
 
 # delete the cluster
 gcloud container --project "$project" clusters delete "$customer-gke-$CLUSTER" --region "$google_region"

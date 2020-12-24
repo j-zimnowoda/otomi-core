@@ -20,12 +20,12 @@ if [ -f "$ENV_DIR/.sops.yaml" ]; then
 fi
 [ -f "$api_secrets.dec" ] && api_secrets="$api_secrets.dec"
 [ -f "$settings_secrets.dec" ] && settings_secrets="$settings_secrets.dec"
-pull_secret="$(yq m $settings $settings_secrets | yq r - 'otomi.pullSecret')"
-repo_url=$(yq m $api_secrets $api_settings | yq r - 'charts[otomi-api].git.repoUrl')
-branch=$(yq m $api_secrets $api_settings | yq r - 'charts[otomi-api].git.branch')
-email=$(yq m $api_secrets $api_settings | yq r - 'charts[otomi-api].git.email')
-user=$(yq m $api_secrets $api_settings | yq r - 'charts[otomi-api].git.user')
-password=$(yq m $api_secrets $api_settings | yq r - 'charts[otomi-api].git.password')
+pull_secret="$(yq e '.' $settings $settings_secrets | yq e '.otomi.pullSecret' -)"
+repo_url=$(yq e '. *+ .' $api_secrets $api_settings | yq e '.charts.otomi-api.git.repoUrl' -)
+branch=$(yq e '. *+ .' $api_secrets $api_settings | yq e '.charts.otomi-api.git.branch' -)
+email=$(yq e '. *+ .' $api_secrets $api_settings | yq e '.charts.otomi-api.git.email' -)
+user=$(yq e '. *+ .' $api_secrets $api_settings | yq e '.charts.otomi-api.git.user' -)
+password=$(yq e '. *+ .' $api_secrets $api_settings | yq e '.chart.otomi-api.git.password' -)
 
 # all present?
 [ "$pull_secret" = "" ] && echo "Error: otomi.pullSecret not set in $ENV_DIR/env/secrets.settings.yaml!" >&2 && err=1

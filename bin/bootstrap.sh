@@ -16,7 +16,7 @@ has_otomi='false'
 function generate_loose_schema() {
   local targetPath="$ENV_DIR/.vscode/values-schema.yaml"
   local sourcePath="$PWD/values-schema.yaml"
-  yq d $sourcePath '**.required.' | yq d - 'properties.toolsVersion' | yq d - 'properties.cluster' >$targetPath
+  yq e 'del(**.required.)' $sourcePath | yq e 'del(properties.toolsVersion)' - | yq e 'del(properties.cluster)' - >$targetPath
   # also put a copy in the .values folder for local hinting of .demo/env/*.yaml files:
   [ "$PWD" != "/home/app/stack" ] && cp $targetPath .values/
   echo "Stored JSON schema at: $targetPath"
@@ -50,7 +50,7 @@ fi
 cp -f $PWD/bin/hooks/pre-commit $ENV_DIR/.git/hooks/
 [ "${GCLOUD_SERVICE_KEY-}" != "" ] && echo $GCLOUD_SERVICE_KEY | jq '.' >$ENV_DIR/gcp-key.json
 secrets_file="$ENV_DIR/env/secrets.settings.yaml"
-if [ -f "$secrets_file" ] && [ "$(cat $secrets_file | yq r - 'otomi.pullSecret')" != "" ]; then
+if [ -f "$secrets_file" ] && [ "$(yq e '.otomi.pullSecret') $secrets_file" != "" ]; then
   echo "Copying Otomi Console setup"
   cp -rf $PWD/docker-compose $ENV_DIR/
   cp -f $PWD/core.yaml $ENV_DIR/

@@ -10,7 +10,7 @@ ENV_DIR=${ENV_DIR:-./env}
 
 prepare_crypt
 readonly values=$(hf_values)
-readonly raw_receiver=$(echo "$values" | yq r - alerts.drone)
+readonly raw_receiver=$(echo "$values" | yq e '.alerts.drone' -)
 readonly receiver=${raw_receiver:-'slack'}
 readonly templatePath=$PWD/tpl/.drone.tpl.$receiver.yml
 readonly customer_name=$(customer_name)
@@ -20,11 +20,12 @@ if [ "$receiver" = 'slack' ]; then
 else
   key="lowPrio"
 fi
-readonly webhook=$(echo "$values" | yq r - "alerts.$receiver.$key")
+readonly webhook=$(echo "$values" | yq e ".alerts.$receiver.$key" -)
 
 function template_drone_config() {
   local targetPath="$ENV_DIR/env/clouds/${CLOUD}/${CLUSTER}/.drone.yml"
-  local otomi_image_tag="$(yq r $clustersFile clouds.${CLOUD}.clusters.${CLUSTER}.otomiVersion)"
+  echo "$(yq e '.clouds.${CLOUD}.clusters.${CLUSTER}.otomiVersion' $clustersFile)"
+  local otomi_image_tag="$(yq e '.clouds.${CLOUD}.clusters.${CLUSTER}.otomiVersion' $clustersFile)"
 
   printf "${COLOR_LIGHT_PURPLE}Creating $targetPath ${COLOR_NC}\n"
 
