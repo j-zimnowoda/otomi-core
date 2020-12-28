@@ -312,17 +312,10 @@ function execute() {
         drun bin/crypt.sh encrypt
       fi
       ;;
-    hf)
-      evaluate_secrets
-      validate_cluster_env
-      set -o pipefail
-      drun helmfile -e $CLOUD-$CLUSTER "$@" | grep -Ev $helmfile_output_hide
-      ;;
-    pull)
-      is_repo
-      evaluate_secrets
-      git -C $ENV_DIR pull
-      drun bin/bootstrap.sh 1
+    migrate-values)
+      check_kube_context=0
+      IN_DOCKER=1
+      drun bin/migrate-values.sh
       ;;
     sync)
       evaluate_secrets
