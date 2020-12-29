@@ -12,12 +12,6 @@ fi
 
 set +e
 
-yellow=$(tput setaf 3)
-reset=$(tput sgr0)
-
-echo "${yellow}CHANGES${reset}"
-# yq r values-schema.yaml changes
-
 previousRevision=""
 git rev-list origin..HEAD | while read -r rev; do
   rev_path="$rev:${path_to_values_schema}"
