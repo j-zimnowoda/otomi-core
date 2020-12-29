@@ -1,5 +1,4 @@
 ---
-$id: '0.2.0'
 $schema: 'http://json-schema.org/draft-07/schema'
 additionalProperties: false
 changes:
@@ -12,6 +11,7 @@ changes:
     charts.cert-manager.president.lastName: 'printf "v%s"'
   backwardMutations:
     charts.cert-manager.president.lastName: 'replace "v" ""'
+  version: '0.2.0'
 definitions:
   alerts:
     properties:
