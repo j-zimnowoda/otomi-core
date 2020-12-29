@@ -15,15 +15,14 @@ set +e
 previousRevision=""
 git rev-list origin..HEAD | while read -r rev; do
   rev_path="$rev:${path_to_values_schema}"
-
   git cat-file -e $rev_path 2>/dev/null
-  if [ $? -eq 0 ]; then
+  if [[ $? -eq 0 ]]; then
     currentRevision=$(git show "$rev_path" | yq r - changes)
     isChanged=$(comm -23 <(echo $currentRevision) <(echo $previousRevision))
-    if [ "$isChanged" != "" ]; then
-      echo "REV: $rev"
-      git show "$rev_path" | yq r - changes
+    if [[ "$isChanged" != "" && "$currentRevision" != "null" ]]; then
       echo "---"
+      echo "REV: $rev"
+      echo "$currentRevision"
     fi
   fi
 
