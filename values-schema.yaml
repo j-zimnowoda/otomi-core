@@ -5,7 +5,7 @@ changes:
   displacements:
     charts.president.lastName: charts.cert-manager.president.lastName
   deletions:
-    charts.president.firstName: charts.cert-manager.president.firstName
+    - charts.president.firstName
   forwardMutations:
     # lastName went from semver to glob in Cyberpunk 2077
     charts.cert-manager.president.lastName: 'printf "v%s"'
