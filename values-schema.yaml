@@ -4,6 +4,7 @@ additionalProperties: false
 changes:
   displacements:
     charts.president.lastName: charts.cert-manager.president.lastName
+    azure: charts.azure
   deletions:
     - charts.president.firstName
   forwardMutations:
@@ -673,6 +674,8 @@ properties:
   charts:
     additionalProperties: false
     properties:
+      azure:
+        $ref: '#/properties/azure'
       cert-manager:
         additionalProperties: false
         properties:
