@@ -41,20 +41,21 @@ trap abort SIGINT
 #######################################
 # https://github.com/google/styleguide/blob/gh-pages/shellguide.md#stdout-vs-stderr
 #######################################
+
 function err() {
   echo "[$(date +'%Y-%m-%dT %T.%3N')] ERROR: $*" >&2
 }
 
 function _rind() {
-  local cmd="$1"
-  shift
-  if [ $has_docker = 'true' ] && [ -n "$IN_DOCKER" ]; then
+  local image="$1" cmd="$2"
+  shift 2
+  if [[ $has_docker = 'true' && ${IN_DOCKER+0} -eq 0 ]]; then
     docker run --rm \
       -v ${ENV_DIR}:${ENV_DIR} \
       -e CLOUD="$CLOUD" \
       -e IN_DOCKER='1' \
       -e CLUSTER="$CLUSTER" \
-      $otomi_tools_image $cmd "$@"
+      $image $cmd "$@"
     return $?
   elif command -v $cmd &>/dev/null; then
     command $cmd "$@"
@@ -69,12 +70,18 @@ function _rind() {
 # https://github.com/google/styleguide/blob/gh-pages/shellguide.md#quoting
 #######################################
 function yq() {
-  _rind "${FUNCNAME[0]}" "$@"
+  _rind "$otomi_tools_image" "${FUNCNAME[0]}" "$@"
   return $?
 }
 
 function jq() {
-  _rind "${FUNCNAME[0]}" "$@"
+  _rind "$otomi_tools_image" "${FUNCNAME[0]}" "$@"
+  return $?
+}
+
+function migrate_values() {
+  set -x
+  _rind "otomi/tasks:migrate-values-task" "npm run tasks:migrate-values"
   return $?
 }
 
