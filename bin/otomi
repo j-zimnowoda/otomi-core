@@ -312,7 +312,7 @@ function execute() {
     migrate-values)
       check_kube_context=0
       IN_DOCKER=0
-      migrate_values "$@"
+      bin/migrate-values.sh "$@"
       ;;
     sync)
       evaluate_secrets

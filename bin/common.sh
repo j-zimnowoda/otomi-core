@@ -79,12 +79,6 @@ function jq() {
   return $?
 }
 
-function migrate_values() {
-  set -x
-  _rind "otomi/tasks:migrate-values-task" "npm run tasks:migrate-values"
-  return $?
-}
-
 function get_k8s_version() {
   yq r $clusters_file "clouds.$CLOUD.clusters.$CLUSTER.k8sVersion"
 }

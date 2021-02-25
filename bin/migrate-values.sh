@@ -2,20 +2,24 @@
 
 set -e
 
+. bin/common.sh
+
 migrate_values_dir=/app/dist/tasks/migrate-values
 
 # PARAMETERS
 env_dir=${migrate_values_dir}/env
 changes=${migrate_values_dir}/mock-changes.yaml
-file=mock.yaml
+schema=mock.yaml
 op=displacements
 
-docker run \
-  -v ${ENV_DIR}/env:${env_dir} \
-  -v ${PWD}/bin/mock-changes.yaml:${migrate_values_dir}/mock-changes.yaml \
-  --rm \
-  otomi/tasks:migrate-values npm run tasks:migrate-values -- \
-  --env-dir ${env_dir} \
-  --changes ${changes} \
-  --file ${file} \
-  --op ${op}
+function migrate_values() {
+  _rind "otomi/tasks:mv" "npm run task:migrate-values" -- \
+    --schema ${schema} \
+    --env-dir ${env_dir} \
+    --changes ${changes} \
+    --file ${file} \
+    --op ${op}
+  return $?
+}
+
+migrate_values
