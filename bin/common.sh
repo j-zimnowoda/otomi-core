@@ -43,8 +43,8 @@ if [ "$caller" == 'bin/otomi' ] || [[ ! "x bash bats" == *"$1"* ]]; then
     exit 1
   fi
 
-  OPTIONS=dtvsp:f:l:
-  LONGOPTS=debug,trace,verbose,skip-cleanup,profile:,file:,label:
+  OPTIONS=dtvsp:f:l:i:
+  LONGOPTS=debug,trace,verbose,skip-cleanup,profile:,file:,label:,image:
   ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
   if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     exit 1
@@ -66,6 +66,10 @@ if [ "$caller" == 'bin/otomi' ] || [[ ! "x bash bats" == *"$1"* ]]; then
       -v | --verbose)
         VERBOSE=1
         shift 1
+        ;;
+      -i | --image)
+        OTOMI_IMAGE_TAG=$2
+        shift 2
         ;;
       -s | --skip-cleanup)
         SKIP_CLEANUP='--skip-cleanup'
@@ -131,10 +135,11 @@ function get_k8s_version() {
 }
 
 function otomi_image_tag() {
-  local otomi_version=''
-  [ -f $clusters_file ] && otomi_version=$(yq r $clusters_file "cluster.otomiVersion")
-  [ -z "$otomi_version" ] && otomi_version='master'
-  echo $otomi_version
+  [ -n "$OTOMI_IMAGE_TAG" ] && echo "$OTOMI_IMAGE_TAG" && return 0
+  local otomi_tag=''
+  [ -f $clusters_file ] && otomi_tag=$(yq r $clusters_file "cluster.otomiVersion")
+  [ -z "$otomi_tag" ] && otomi_tag='master'
+  echo $otomi_tag
 }
 
 function customer_name() {

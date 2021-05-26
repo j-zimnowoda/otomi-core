@@ -28,7 +28,7 @@ ENV_DIR=${ENV_DIR:-$PWD}
 stack_dir='/home/app/stack'
 readonly image_tag=$(otomi_image_tag)
 readonly cmd_image="otomi/core:$image_tag"
-[ -n "$VERBOSE" ] && echo "cmd_image: $cmd_image"
+echo "otomi uses this image: $cmd_image"
 
 docker_terminal_params='-it'
 readme_url='https://github.com/redkubes/otomi-core'
@@ -77,6 +77,7 @@ function show_usage() {
     -t | --trace         Trace otomi CLI calls. Sets bash prompt with time.
     -v | --verbose       Show more output.
     -s | --skip-cleanup  Keep temporary files for inspections.
+    -i | --image         Select image tag to use, e.g.: master will use 'otomi/core:master'
 
   (*) Takes helmfile options:
     -l|--label           Select charts by label (format: <label>=<value>), e.g. '-l name=prometheus-operator' or '--label group=jobs'
