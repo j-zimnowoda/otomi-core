@@ -52,49 +52,49 @@ if [ "$caller" == 'bin/otomi' ] || [[ ! "x bash bats" == *"$1"* ]]; then
   eval set -- "$PARSED"
   while true; do
     case "$1" in
-    -d | --debug)
-      DEBUG=1
-      LOG_LEVEL='--log-level debug'
-      shift 1
-      ;;
-    -t | --trace)
-      TRACE=1
-      PS4='[\D{%F %T}] $BASH_SOURCE:$LINENO:'
-      set -x
-      shift 1
-      ;;
-    -v | --verbose)
-      VERBOSE=1
-      shift 1
-      ;;
-    -i | --image)
-      OTOMI_IMAGE_TAG=$2
-      shift 2
-      ;;
-    -s | --skip-cleanup)
-      SKIP_CLEANUP='--skip-cleanup'
-      shift 1
-      ;;
-    -p | --profile)
-      PROFILE=$2
-      shift 2
-      ;;
-    -f | --file)
-      FILE_OPT="$FILE_OPT -f $2"
-      shift 2
-      ;;
-    -l | --label)
-      LABEL_OPT="$LABEL_OPT -l $2"
-      shift 2
-      ;;
-    --)
-      shift
-      break
-      ;;
-    *)
-      err "Programming error: expected '--' but got $1"
-      exit 1
-      ;;
+      -d | --debug)
+        DEBUG=1
+        LOG_LEVEL='--log-level debug'
+        shift 1
+        ;;
+      -t | --trace)
+        TRACE=1
+        PS4='[\D{%F %T}] $BASH_SOURCE:$LINENO:'
+        set -x
+        shift 1
+        ;;
+      -v | --verbose)
+        VERBOSE=1
+        shift 1
+        ;;
+      -i | --image)
+        OTOMI_IMAGE_TAG=$2
+        shift 2
+        ;;
+      -s | --skip-cleanup)
+        SKIP_CLEANUP='--skip-cleanup'
+        shift 1
+        ;;
+      -p | --profile)
+        PROFILE=$2
+        shift 2
+        ;;
+      -f | --file)
+        FILE_OPT="$FILE_OPT -f $2"
+        shift 2
+        ;;
+      -l | --label)
+        LABEL_OPT="$LABEL_OPT -l $2"
+        shift 2
+        ;;
+      --)
+        shift
+        break
+        ;;
+      *)
+        err "Programming error: expected '--' but got $1"
+        exit 1
+        ;;
     esac
   done
 fi
@@ -231,4 +231,21 @@ function hf_template() {
     [ -z "$FILE_OPT" ] && [ -z "$LABEL_OPT" ] && hf -f helmfile.tpl/helmfile-init.yaml template --skip-deps $SKIP_CLEANUP
     hf template --skip-deps $SKIP_CLEANUP
   fi
+}
+
+#####
+# E.g. `named_volume $HOME/.ssh /home/app/.ssh`
+####
+function named_volume() {
+  [ -z "$NAMED_VOLUME" ] && volume_name='otomi-volume'
+  helper_container_name="named-volume-tmp-helper-container"
+
+  source_files=$1
+  destination_path=$2
+
+  docker container inspect $helper_container_name >/dev/null 2>&1 && docker rm $helper_container_name
+  docker container create --name $helper_container_name -v $volume_name:$destination_path hello-world >/dev/null 2>&1 &&
+    docker cp $source_files $helper_container_name:$destination_path >/dev/null 2>&1 &&
+    docker rm $helper_container_name >/dev/null 2>&1
+  echo $volume_name
 }

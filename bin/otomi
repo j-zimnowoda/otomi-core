@@ -164,21 +164,26 @@ function drun() {
     kubectl version >/dev/null
   fi
 
-  [ -n "$mount_stack_dir" ] && stack_volume="-v ${stack_dir}:${stack_dir}"
+  [ -n "$mount_stack_dir" ] && named_volume ${stack_dir} ${stack_dir}
+
+  NAMED_VOLUME='otomi-volume'
+  named_volume /tmp /tmp
+  named_volume $socket_volume $socket_volume
+  named_volume ${KUBECONFIG:-$HOME/.kube/config} /home/app/.kube/config
+  named_volume $HOME/.ssh /home/app/.ssh
+  named_volume $helm_config /home/app/.config/helm
+  named_volume $HOME/.config/gcloud /home/app/.config/gcloud
+  named_volume $HOME/.aws /home/app/.aws
+  named_volume $HOME/.azure /home/app/.azure
+  named_volume $ENV_DIR $stack_dir/env
 
   # use docker run if not in docker
   if [ -z "$IN_DOCKER" ]; then
     [ -n "$VERBOSE" ] && echo "Running dockerized version of command: $command"
     [ "$image_tag" = 'latest' ] || [ "$image_tag" = 'master' ] && [ -z "$NOPULL" ] && docker pull "otomi/core:$image_tag" >/dev/null
+
     docker run $docker_terminal_params --network host --rm \
-      $stack_volume $socket_volume -v /tmp:/tmp \
-      -v ${KUBECONFIG:-$HOME/.kube/config}:/home/app/.kube/config \
-      -v $HOME/.ssh:/home/app/.ssh \
-      -v $helm_config:/home/app/.config/helm \
-      -v $HOME/.config/gcloud:/home/app/.config/gcloud \
-      -v $HOME/.aws:/home/app/.aws \
-      -v $HOME/.azure:/home/app/.azure \
-      -v $ENV_DIR:$stack_dir/env \
+      -v $NAMED_VOLUME:/home/app \
       -e AZURE_TENANT_ID=$AZURE_TENANT_ID \
       -e AZURE_CLIENT_ID=$AZURE_CLIENT_ID \
       -e AZURE_CLIENT_SECRET=$AZURE_CLIENT_SECRET \
