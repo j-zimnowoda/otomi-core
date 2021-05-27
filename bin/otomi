@@ -150,6 +150,21 @@ function run_console() {
   rm /tmp/otomi-env
 }
 
+function named_volume() {
+  [ -z "$NAMED_VOLUME" ] && volume_name='otomi-volume'
+  helper_container_name="named-volume-tmp-helper-container"
+
+  source_files=$1
+  destination_path=$2
+
+  docker container inspect $helper_container_name >/dev/null 2>&1 && docker rm $helper_container_name
+  docker container create --name $helper_container_name -v $volume_name:$destination_path hello-world >/dev/null 2>&1 &&
+    docker cp $source_files $helper_container_name:$destination_path >/dev/null 2>&1 &&
+    docker rm $helper_container_name >/dev/null 2>&1
+
+  retval="$volume_name:$destination_path"
+}
+
 function drun() {
   local command=$@
   local stack_volume=''
@@ -167,23 +182,24 @@ function drun() {
   [ -n "$mount_stack_dir" ] && named_volume ${stack_dir} ${stack_dir}
 
   NAMED_VOLUME='otomi-volume'
-  named_volume /tmp /tmp
-  named_volume $socket_volume $socket_volume
-  named_volume ${KUBECONFIG:-$HOME/.kube/config} /home/app/.kube/config
-  named_volume $HOME/.ssh /home/app/.ssh
-  named_volume $helm_config /home/app/.config/helm
-  named_volume $HOME/.config/gcloud /home/app/.config/gcloud
-  named_volume $HOME/.aws /home/app/.aws
-  named_volume $HOME/.azure /home/app/.azure
-  named_volume $ENV_DIR $stack_dir/env
+  docker volume rm --force $NAMED_VOLUME
+
+  # named_volume $socket_volume $socket_volume
+  # named_volume ${KUBECONFIG:-$HOME/.kube/config} /home/app/.kube/config
+  # named_volume $HOME/.ssh /home/app/.ssh
+  # named_volume $helm_config /home/app/.config/helm
+  # named_volume $HOME/.config/gcloud /home/app/.config/gcloud
+  # named_volume $HOME/.aws /home/app/.aws
+  # named_volume $HOME/.azure /home/app/.azure
+  # named_volume $ENV_DIR $stack_dir/env
 
   # use docker run if not in docker
   if [ -z "$IN_DOCKER" ]; then
     [ -n "$VERBOSE" ] && echo "Running dockerized version of command: $command"
     [ "$image_tag" = 'latest' ] || [ "$image_tag" = 'master' ] && [ -z "$NOPULL" ] && docker pull "otomi/core:$image_tag" >/dev/null
-
+    set -x
     docker run $docker_terminal_params --network host --rm \
-      -v $NAMED_VOLUME:/home/app \
+      -v $(named_volume /tmp /tmp && echo $retval) \
       -e AZURE_TENANT_ID=$AZURE_TENANT_ID \
       -e AZURE_CLIENT_ID=$AZURE_CLIENT_ID \
       -e AZURE_CLIENT_SECRET=$AZURE_CLIENT_SECRET \

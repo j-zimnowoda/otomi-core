@@ -236,16 +236,3 @@ function hf_template() {
 #####
 # E.g. `named_volume $HOME/.ssh /home/app/.ssh`
 ####
-function named_volume() {
-  [ -z "$NAMED_VOLUME" ] && volume_name='otomi-volume'
-  helper_container_name="named-volume-tmp-helper-container"
-
-  source_files=$1
-  destination_path=$2
-
-  docker container inspect $helper_container_name >/dev/null 2>&1 && docker rm $helper_container_name
-  docker container create --name $helper_container_name -v $volume_name:$destination_path hello-world >/dev/null 2>&1 &&
-    docker cp $source_files $helper_container_name:$destination_path >/dev/null 2>&1 &&
-    docker rm $helper_container_name >/dev/null 2>&1
-  echo $volume_name
-}
