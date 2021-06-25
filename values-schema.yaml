@@ -167,8 +167,9 @@ definitions:
         description: Only used for API/UI to show in app.
         type: string
       apiServer:
-        description: Used by kubectl for local deployment to target cluster.
-        $ref: '#/definitions/url'
+        description: Used by kubectl for local deployment to target cluster. Should not contain protocol (https://).
+        pattern: ^(?!http)(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])(:[0-9]*)?$
+        type: string
       domainSuffix:
         $ref: '#/definitions/domain'
         description: Domain suffix for the cluster. Also added to list of dns zones in the Otomi Console.
