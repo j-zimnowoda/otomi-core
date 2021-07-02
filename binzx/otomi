@@ -97,12 +97,12 @@ check_update() {
   if [ "$last_commit_date_sec" -ne "0" ] && [ "$last_commit_date_sec" -gt "$last_file_change_sec" ]; then
     read -r -p "Newer version is available, do you want to update (yes/No)? " answer
     case ${answer:0:1} in
-      y | Y)
-        run_self_update
-        ;;
-      *)
-        return 0
-        ;;
+    y | Y)
+      run_self_update
+      ;;
+    *)
+      return 0
+      ;;
     esac
   fi
 }
@@ -152,7 +152,7 @@ if [ "$status" -ne 0 ]; then
   exit $status
 fi
 
-docker run --network host --rm -it \
+docker run --network host --rm -it --user root:root \
   $stack_volume \
   -v ${KUBECONFIG:-$HOME/.kube/config}:/home/app/.kube/config \
   -v $HOME/.ssh:/home/app/.ssh \

@@ -11,6 +11,7 @@ import encryptModule from './encrypt'
 import genDroneModule from './gen-drone'
 import genSopsModule from './gen-sops'
 import hfModule from './hf'
+import kindModule from './kind'
 import lintModule from './lint'
 import playgroundModule from './playground'
 import pullModule from './pull'
@@ -37,6 +38,7 @@ export { default as encrypt } from './encrypt'
 export { default as genDrone } from './gen-drone'
 export { default as genSops } from './gen-sops'
 export { default as hf } from './hf'
+export { default as kind } from './kind'
 export { default as lint } from './lint'
 export { default as pull } from './pull'
 export { default as regCred } from './regcred'
@@ -63,6 +65,7 @@ export const commands: CommandModule[] = [
   genDroneModule,
   genSopsModule,
   hfModule,
+  kindModule,
   lintModule,
   playgroundModule,
   pullModule,
