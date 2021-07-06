@@ -165,6 +165,7 @@ npm run compile && docker run --network host --rm -it --user root:root \
   -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
   -v $ENV_DIR:$stack_dir/env \
   -v $ENV_DIR:$ENV_DIR \
+  -v /var/run/docker.sock:/var/run/docker.sock \
   --env-file $tmp_env \
   -w $stack_dir \
   $otomi_tools_image \
