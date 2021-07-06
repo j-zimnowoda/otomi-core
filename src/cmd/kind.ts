@@ -1,4 +1,5 @@
 import { Argv } from 'yargs'
+import { $ } from 'zx'
 import { OtomiDebugger, terminal } from '../common/debug'
 import { BasicArguments, ENV } from '../common/no-deps'
 import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setup'
@@ -24,8 +25,7 @@ const setup = async (argv: Arguments, options?: PrepareEnvironmentOptions): Prom
 export const kind = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
   await setup(argv, options)
 
-  debug.log(fileName)
-  debug.log(argv)
+  console.log(await $`/usr/local/bin/kind -h`)
 }
 
 export const module = {
