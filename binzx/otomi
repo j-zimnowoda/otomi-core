@@ -144,15 +144,17 @@ if [ "$1" = "bash" ] && [ "$#" = "1" ]; then # If command is "otomi bash"
   cmd="bash"
 fi
 
-pull_output=$(docker pull $otomi_tools_image 2>&1 >/dev/null)
-status=$?
-if [ "$status" -ne 0 ]; then
-  echo "$pull_output"
-  echo "Could not find an image for the supplied OTOMI_TAG: '${OTOMI_TAG}'"
-  exit $status
-fi
+docker image inspect $otomi_tools_image >/dev/null 2>&1 || {
+  pull_output=$(docker pull $otomi_tools_image 2>&1 >/dev/null)
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    echo "$pull_output"
+    echo "Could not find an image for the supplied OTOMI_TAG: '${OTOMI_TAG}'"
+    exit $status
+  fi
+} >/dev/null 2>&1
 
-docker run --network host --rm -it --user root:root \
+npm run compile && docker run --network host --rm -it --user root:root \
   $stack_volume \
   -v ${KUBECONFIG:-$HOME/.kube/config}:/home/app/.kube/config \
   -v $HOME/.ssh:/home/app/.ssh \
