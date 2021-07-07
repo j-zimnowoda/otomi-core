@@ -105,6 +105,7 @@ export type PrepareEnvironmentOptions = {
   skipEvaluateSecrets?: boolean
   skipKubeContextCheck?: boolean
   skipDecrypt?: boolean
+  skipAll?: boolean
 }
 
 export const otomi = {
@@ -124,8 +125,8 @@ export const otomi = {
    */
   imageTag: (): string => {
     if (otomiImageTag) return otomiImageTag
-    const file = `${ENV.DIR}/env/cluster.yaml`
-    if (!existsSync(file)) return process.env.DOCKER_TAG ?? 'master'
+    const file = `${ENV.DIR}/env/settings.yaml`
+    if (!existsSync(file)) return process.env.OTOMI_TAG ?? 'master'
     const clusterFile = load(file) as any
     otomiImageTag = clusterFile.otomi?.version ?? 'master'
     return otomiImageTag
@@ -146,12 +147,13 @@ export const otomi = {
    * @param debugPar
    */
   prepareEnvironment: async (debugPar: OtomiDebugger, options?: PrepareEnvironmentOptions): Promise<void> => {
+    if (options && options.skipAll) return
     const debug = debugPar.extend('prep environment')
     debug.verbose('Checking environment')
     if (!options?.skipEnvDirCheck && checkENVdir(debug)) {
       if (!ENV.isCI && !options?.skipEvaluateSecrets) await evaluateSecrets(debug)
-      if (!options?.skipKubeContextCheck) await checkKubeContext(debug)
-      if (!options?.skipDecrypt) await decrypt(debug)
+      if (!ENV.isCI && !options?.skipKubeContextCheck) await checkKubeContext(debug)
+      if (!ENV.isCI && !options?.skipDecrypt) await decrypt(debug)
     }
   },
   /**
