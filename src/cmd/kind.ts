@@ -1,20 +1,28 @@
-import { Argv } from 'yargs'
+import { Argv, Options } from 'yargs'
 import { $ } from 'zx'
 import { OtomiDebugger, terminal } from '../common/debug'
 import { BasicArguments, ENV } from '../common/no-deps'
 import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setup'
-import { apply } from './apply'
+import { deployAll } from './apply'
 
-type Arguments = BasicArguments
+interface Arguments extends BasicArguments {
+  'delete-cluster'?: boolean
+}
+
+const kindOptions: { [key: string]: Options } = {
+  'delete-cluster': {
+    describe: 'Determines whether the KinD cluster is automatically cleaned up.',
+    nargs: 1,
+  },
+}
 
 const fileName = 'kind'
 let debug: OtomiDebugger
-const now = Date.now()
+const buildID = Date.now()
 
 /* eslint-disable no-useless-return */
-const cleanup = async (argv: Arguments): Promise<void> => {
+const cleanup = (argv: Arguments): void => {
   if (argv['skip-cleanup']) return
-  await $`kind delete cluster --name=${now}`
 }
 
 /* eslint-enable no-useless-return */
@@ -29,17 +37,19 @@ export const kind = async (argv: Arguments, options?: PrepareEnvironmentOptions)
   await setup(argv, options)
 
   const tags = ['v1.19.0']
-  process.env.KUBECONFIG = `${process.env.HOME}/.kube/configs/${now}`
+  process.env.KUBECONFIG = `${process.env.HOME}/.kube/${buildID}`
 
-  await $`kind create cluster --wait 30s --name=${now} --image=kindest/node:${tags[0]}`
+  await $`kind create cluster --wait 30s --name=${buildID} --image=kindest/node:${tags[0]}`
+  process.env.isCI = 'true'
+  deployAll({ ...argv, dryRun: false, d: false, 'dry-run': false })
 
-  apply({ ...argv, dryRun: false, d: false, 'dry-run': false }, { skipAll: true })
+  if (argv.deleteCluster) await $`kind delete cluster --name=${buildID}`
 }
 
 export const module = {
   command: fileName,
-  describe: 'kind',
-  builder: (parser: Argv): Argv => parser,
+  describe: 'kind, test-system',
+  builder: (parser: Argv): Argv => parser.options(kindOptions),
 
   handler: async (argv: Arguments): Promise<void> => {
     ENV.PARSED_ARGS = argv
