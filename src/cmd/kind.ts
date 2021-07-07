@@ -3,15 +3,18 @@ import { $ } from 'zx'
 import { OtomiDebugger, terminal } from '../common/debug'
 import { BasicArguments, ENV } from '../common/no-deps'
 import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setup'
+import { apply } from './apply'
 
 type Arguments = BasicArguments
 
 const fileName = 'kind'
 let debug: OtomiDebugger
+const now = Date.now()
 
 /* eslint-disable no-useless-return */
-const cleanup = (argv: Arguments): void => {
+const cleanup = async (argv: Arguments): Promise<void> => {
   if (argv['skip-cleanup']) return
+  await $`kind delete cluster --name=${now}`
 }
 
 /* eslint-enable no-useless-return */
@@ -22,25 +25,15 @@ const setup = async (argv: Arguments, options?: PrepareEnvironmentOptions): Prom
   if (options) await otomi.prepareEnvironment(debug, options)
 }
 
-function guidGenerator() {
-  const S4 = function () {
-    // eslint-disable-next-line no-bitwise
-    return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1)
-  }
-  return `${S4() + S4()}-${S4()}-${S4()}-${S4()}-${S4()}${S4()}${S4()}`
-}
-
 export const kind = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
   await setup(argv, options)
 
-  const buildID = guidGenerator()
   const tags = ['v1.19.0']
-  const KUBECONFIG = `$HOME/.kube/configs/${buildID}`
+  process.env.KUBECONFIG = `${process.env.HOME}/.kube/configs/${now}`
 
-  await $`curl -sSL https://get.docker.com/ | sh`
-  await $`export KUBECONFIG=${KUBECONFIG}`
-  await $`kind create cluster --wait 30s --name=${buildID} --image=kindest/node:${tags[0]}`
-  await $`kind delete cluster --name=${buildID}`
+  await $`kind create cluster --wait 30s --name=${now} --image=kindest/node:${tags[0]}`
+
+  apply({ ...argv, dryRun: false, d: false, 'dry-run': false }, { skipAll: true })
 }
 
 export const module = {
@@ -50,7 +43,9 @@ export const module = {
 
   handler: async (argv: Arguments): Promise<void> => {
     ENV.PARSED_ARGS = argv
-    await kind(argv, {})
+    await kind(argv, {
+      skipKubeContextCheck: true,
+    })
   },
 }
 

@@ -7,7 +7,7 @@ const MAX_RETRIES_QUESTION = 3
 
 /**
  * Do a bi-directional source.
- * Sourcing using `bash` within zx, only applies to those commands, but are not avaialbe using `process.env.ENV_VAR_HERE`
+ * Sourcing using `bash` within zx, only applies to those commands, but are not available using `process.env.ENV_VAR_HERE`
  * This function also maps that to process.env, making it bi-directional
  * @param path
  * @param force force sourcing of a file - even if it has previously been sourced
