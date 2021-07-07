@@ -3,7 +3,6 @@ import { $ } from 'zx'
 import { OtomiDebugger, terminal } from '../common/debug'
 import { BasicArguments, ENV } from '../common/no-deps'
 import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setup'
-import { deployAll } from './apply'
 
 interface Arguments extends BasicArguments {
   'delete-cluster'?: boolean
@@ -38,10 +37,14 @@ export const kind = async (argv: Arguments, options?: PrepareEnvironmentOptions)
 
   const tags = ['v1.19.0']
   process.env.KUBECONFIG = `${process.env.HOME}/.kube/${buildID}`
-
-  await $`kind create cluster --wait 30s --name=${buildID} --image=kindest/node:${tags[0]}`
   process.env.isCI = 'true'
-  deployAll({ ...argv, dryRun: false, d: false, 'dry-run': false })
+
+  await $`kind create cluster --wait=30s --name=${buildID} --image=kindest/node:${tags[0]}`
+  try {
+    await $`bin/deploy.sh`
+  } catch (e) {
+    debug.log(e)
+  }
 
   if (argv.deleteCluster) await $`kind delete cluster --name=${buildID}`
 }
