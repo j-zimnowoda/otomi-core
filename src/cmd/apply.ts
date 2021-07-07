@@ -56,7 +56,8 @@ const genDemoMtlsCertSecret = async () => {
   }
 }
 
-const deployAll = async (argv: Arguments) => {
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+export const deployAll = async (argv: Arguments) => {
   if (!ENV.isCI) {
     await genDemoMtlsCertSecret()
   }
