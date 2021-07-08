@@ -22,6 +22,7 @@ const kindOptions: { [key: string]: Options } = {
     type: 'boolean',
   },
   wait: {
+    alias: 'w',
     describe: 'Wait for the cluster to be ready before running the test suite.',
     default: '0s',
     type: 'string',
