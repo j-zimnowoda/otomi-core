@@ -6,18 +6,25 @@ import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setu
 
 interface Arguments extends BasicArguments {
   'delete-cluster'?: boolean
+  'no-deploy'?: boolean
 }
 
 const kindOptions: { [key: string]: Options } = {
   'delete-cluster': {
-    describe: 'Determines whether the KinD cluster is automatically cleaned up.',
-    nargs: 1,
+    describe: 'Delete the cluster after running the test suite.',
+  },
+  'no-deploy': {
+    describe: 'Create the cluster without running the test suite.',
   },
 }
 
 const fileName = 'kind'
 let debug: OtomiDebugger
 const buildID = Date.now()
+const tags = ['v1.19.0']
+const context = `k8s-${tags[0]}-${buildID}`
+process.env.KUBECONFIG = `${process.env.HOME}/.kube/${context}`
+process.env.isCI = 'true'
 
 /* eslint-disable no-useless-return */
 const cleanup = (argv: Arguments): void => {
@@ -33,20 +40,21 @@ const setup = async (argv: Arguments, options?: PrepareEnvironmentOptions): Prom
 }
 
 export const kind = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
+  await $`touch ${ENV.KUBECONFIG}`
   await setup(argv, options)
 
-  const tags = ['v1.19.0']
-  process.env.KUBECONFIG = `${process.env.HOME}/.kube/${buildID}`
-  process.env.isCI = 'true'
+  await $`kind create cluster --wait 30s --name ${context} --kubeconfig ${ENV.KUBECONFIG} --image kindest/node:${tags[0]}`
+  await $`kubectl cluster-info --context kind-${context} --kubeconfig ${ENV.KUBECONFIG}`
 
-  await $`kind create cluster --wait=30s --name=${buildID} --image=kindest/node:${tags[0]}`
-  try {
-    await $`bin/deploy.sh`
-  } catch (e) {
-    debug.log(e)
+  if (!argv['no-deploy']) {
+    try {
+      await $`bin/deploy.sh`
+    } catch (e) {
+      debug.log(e)
+    }
   }
 
-  if (argv.deleteCluster) await $`kind delete cluster --name=${buildID}`
+  if (argv.deleteCluster) await $`kind delete cluster --name=${context}`
 }
 
 export const module = {

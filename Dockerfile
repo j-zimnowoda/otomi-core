@@ -44,6 +44,8 @@ RUN mkdir -p $APP_HOME
 WORKDIR $APP_HOME
 COPY . .
 
+ENV ENV_DIR=/home/app/stack/profiles/aws/env
+
 RUN npm ci && npm run compile
 
 #-----------------------------
