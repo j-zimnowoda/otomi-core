@@ -42,6 +42,9 @@ export const ENV = {
   get KUBECONFIG(): string {
     return process.env.KUBECONFIG as string
   },
+  get USER(): string {
+    return process.env.USER as string
+  },
 }
 export const asArray = (args: string | string[]): string[] => {
   return Array.isArray(args) ? args : [args]

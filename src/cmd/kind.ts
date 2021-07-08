@@ -12,18 +12,23 @@ interface Arguments extends BasicArguments {
 const kindOptions: { [key: string]: Options } = {
   'delete-cluster': {
     describe: 'Delete the cluster after running the test suite.',
+    default: true,
   },
   'no-deploy': {
     describe: 'Create the cluster without running the test suite.',
+    default: false,
+  },
+  wait: {
+    describe: 'Wait for the cluster to be ready before running the test suite.',
+    default: '0s',
   },
 }
 
 const fileName = 'kind'
 let debug: OtomiDebugger
-const buildID = Date.now()
 const tags = ['v1.19.0']
-const context = `k8s-${tags[0]}-${buildID}`
-process.env.KUBECONFIG = `${process.env.HOME}/.kube/${context}`
+const name = 'otomi-system'
+process.env.KUBECONFIG = `${process.env.HOME}/.kube/${name}`
 process.env.isCI = 'true'
 
 /* eslint-disable no-useless-return */
@@ -33,6 +38,8 @@ const cleanup = (argv: Arguments): void => {
 
 /* eslint-enable no-useless-return */
 const setup = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
+  await $`touch ${ENV.KUBECONFIG} && chmod 600 ${ENV.KUBECONFIG}`
+
   if (argv._[0] === fileName) cleanupHandler(() => cleanup(argv))
   debug = terminal(fileName)
 
@@ -40,11 +47,9 @@ const setup = async (argv: Arguments, options?: PrepareEnvironmentOptions): Prom
 }
 
 export const kind = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
-  await $`touch ${ENV.KUBECONFIG}`
   await setup(argv, options)
 
-  await $`kind create cluster --wait 30s --name ${context} --kubeconfig ${ENV.KUBECONFIG} --image kindest/node:${tags[0]}`
-  await $`kubectl cluster-info --context kind-${context} --kubeconfig ${ENV.KUBECONFIG}`
+  await $`kind create cluster --wait ${argv.wait} --name ${name} --kubeconfig ${ENV.KUBECONFIG} --image kindest/node:${tags[0]}`
 
   if (!argv['no-deploy']) {
     try {
@@ -54,7 +59,7 @@ export const kind = async (argv: Arguments, options?: PrepareEnvironmentOptions)
     }
   }
 
-  if (argv.deleteCluster) await $`kind delete cluster --name=${context}`
+  if (argv.deleteCluster) await $`kind delete cluster --name ${name}`
 }
 
 export const module = {
