@@ -116,6 +116,7 @@ SHELL=${path_to_exec_shell}
 OTOMI_TAG=${OTOMI_TAG}
 OTOMI_CALLER_COMMAND=${BASH_SOURCE[0]##*/}
 OTOMI_IN_DOCKER=true
+KUBECONFIG=
 EOF
 
 helm_config="$HOME/.config/helm"
@@ -156,7 +157,7 @@ docker image inspect $otomi_tools_image >/dev/null 2>&1 || {
 
 npm run compile && docker run --network host --rm -it --user root:root \
   $stack_volume \
-  -v ${KUBECONFIG:-$HOME/.kube}:/home/app/.kube \
+  -v ${KUBECONFIG:-$HOME/.kube/config}:/home/app/.kube/config \
   -v $HOME/.ssh:/home/app/.ssh \
   -v $helm_config:/home/app/.config/helm \
   -v $HOME/.config/gcloud:/home/app/.config/gcloud \

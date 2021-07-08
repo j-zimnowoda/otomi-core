@@ -5,22 +5,26 @@ import { BasicArguments, ENV } from '../common/no-deps'
 import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setup'
 
 interface Arguments extends BasicArguments {
-  'delete-cluster'?: boolean
-  'no-deploy'?: boolean
+  'delete-cluster': boolean
+  'no-deploy': boolean
+  wait: string
 }
 
 const kindOptions: { [key: string]: Options } = {
   'delete-cluster': {
     describe: 'Delete the cluster after running the test suite.',
     default: true,
+    type: 'boolean',
   },
   'no-deploy': {
     describe: 'Create the cluster without running the test suite.',
     default: false,
+    type: 'boolean',
   },
   wait: {
     describe: 'Wait for the cluster to be ready before running the test suite.',
     default: '0s',
+    type: 'string',
   },
 }
 
@@ -58,8 +62,7 @@ export const kind = async (argv: Arguments, options?: PrepareEnvironmentOptions)
       debug.log(e)
     }
   }
-
-  if (argv.deleteCluster) await $`kind delete cluster --name ${name}`
+  if (argv['delete-cluster']) await $`kind delete cluster --name ${name}`
 }
 
 export const module = {
