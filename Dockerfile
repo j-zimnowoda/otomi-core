@@ -1,4 +1,4 @@
-ARG TOOLS_TAG
+ARG TOOLS_TAG=v1.4.16
 
 #-----------------------------
 FROM node:14-slim as npm

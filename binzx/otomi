@@ -155,7 +155,8 @@ docker image inspect $otomi_tools_image >/dev/null 2>&1 || {
   fi
 } >/dev/null 2>&1
 
-npm run compile && docker run --network host --rm -it --user root:root \
+# If $KUBECONFIG is mounted then we should unset it so that it is not used in the container.
+docker run --network host --rm -it --user root:root \
   $stack_volume \
   -v ${KUBECONFIG:-$HOME/.kube/config}:/home/app/.kube/config \
   -v $HOME/.ssh:/home/app/.ssh \
