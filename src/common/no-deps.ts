@@ -39,6 +39,9 @@ export const ENV = {
   get isTESTING(): boolean {
     return 'TESTING' in process.env
   },
+  get KUBECONFIG(): string {
+    return process.env.KUBECONFIG as string
+  },
 }
 export const asArray = (args: string | string[]): string[] => {
   return Array.isArray(args) ? args : [args]
