@@ -1,4 +1,4 @@
-ARG TOOLS_TAG=v1.4.16
+ARG TOOLS_TAG=kind
 
 #-----------------------------
 FROM node:14-slim as npm
@@ -29,22 +29,6 @@ ENV CI=true
 COPY --chown=app . .
 
 RUN if [ "$SKIP_TESTS" = 'false' ]; then bin/ci-tests.sh; fi
-
-#-----------------------------
-FROM otomi/tools:$TOOLS_TAG as system
-
-USER root
-RUN curl -sSL https://get.docker.com/ | sh && \
-  curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.11.1/kind-linux-amd64 && \
-  chmod +x ./kind && \
-  mv ./kind /usr/local/bin/kind
-
-ENV APP_HOME=/home/app/stack
-RUN mkdir -p $APP_HOME
-WORKDIR $APP_HOME
-COPY . .
-
-RUN npm ci && npm run compile
 
 #-----------------------------
 FROM otomi/tools:$TOOLS_TAG as prod
