@@ -15,7 +15,6 @@ import { otomi } from './common/setup'
 
 const debug = terminal('global')
 const terminalScale = 0.75
-if (!('OTOMI_IN_DOCKER' in process.env)) debug.exit(1, 'Please run this script using the `otomi` entry script')
 
 try {
   parser.scriptName(otomi.scriptName)

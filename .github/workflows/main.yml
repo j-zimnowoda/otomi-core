@@ -91,9 +91,8 @@ jobs:
       image: otomi/core:kind
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
-      options: --user root:root --privileged
+      options: --user root:root --privileged --rm
     steps:
-      - name: Proof of concept -- run hello-world dind in Github Actions
-        run: /usr/bin/docker run --rm hello-world
-      - name: Proof of concept -- run `kind create cluster` in Github Actions
-        run: kind create cluster
+      - name: Proof of concept -- run `binzx/otomi kind` in Github Actions
+        run: ENV_DIR=/home/app/stack/profiles/aws /usr/bin/node --experimental-specifier-resolution=node /home/app/stack/dist/otomi.js -- kind -vvvv
+        working-directory: /home/app/stack
