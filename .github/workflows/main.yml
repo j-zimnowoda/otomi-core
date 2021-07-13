@@ -95,3 +95,5 @@ jobs:
     steps:
       - name: Proof of concept -- run hello-world dind in Github Actions
         run: /usr/bin/docker run --rm hello-world
+      - name: Proof of concept -- run `kind create cluster` in Github Actions
+        run: kind create cluster
