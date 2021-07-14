@@ -89,10 +89,20 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: otomi/core:kind
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-      options: --user root:root --privileged --rm
+      options: --user root:root
     steps:
+      - name: PWD
+        run: echo $PWD
+        working-directory: /home/app/stack
+      - name: ls stack_dir
+        run: ls -lah /home/app/stack
+        working-directory: /home/app/stack
+      - name: ls profiles/aws
+        run: ls -lah /home/app/stack/profiles/aws
+        working-directory: /home/app/stack/profiles/aws
       - name: Proof of concept -- run `binzx/otomi kind` in Github Actions
-        run: ENV_DIR=/home/app/stack/profiles/aws /usr/bin/node --experimental-specifier-resolution=node /home/app/stack/dist/otomi.js -- kind -vvvv
+        run: |
+          set -e
+          cp -r /home/app/stack/profiles/aws /home/app/stack/env
+          ENV_DIR=/home/app/stack/profiles/aws /usr/bin/node --experimental-specifier-resolution=node /home/app/stack/dist/otomi.js -- kind -vvvv
         working-directory: /home/app/stack

@@ -6,7 +6,7 @@
  *  node --experimental-specifier-resolution=node ./dist/otomi.js -- <args>
  */
 
-import { readdirSync } from 'fs'
+import { lstatSync, readdirSync } from 'fs'
 import { CommandModule } from 'yargs'
 import { bootstrap, commands, defaultCommand } from './cmd'
 import { terminal } from './common/debug'
@@ -16,9 +16,28 @@ import { otomi } from './common/setup'
 const debug = terminal('global')
 const terminalScale = 0.75
 
+const envDirContent = readdirSync(ENV.DIR)
+if (envDirContent.length > 0) {
+  try {
+    let errorMessage = ''
+    if (!lstatSync(`${ENV.DIR}/.git`).isDirectory()) errorMessage += `\n${ENV.DIR}/.git is not a directory`
+    if (!lstatSync(`${ENV.DIR}/env`).isDirectory()) errorMessage += `\n${ENV.DIR}/env is not a directory`
+    if (!lstatSync(`${ENV.DIR}/env/charts`).isDirectory()) errorMessage += `\n${ENV.DIR}/env/charts is not a directory`
+    if (!lstatSync(`${ENV.DIR}/env/cluster.yaml`).isFile())
+      errorMessage += `\n${ENV.DIR}/env/cluster.yaml is not a file`
+    if (!lstatSync(`${ENV.DIR}/env/settings.yaml`).isFile())
+      errorMessage += `\n${ENV.DIR}/env/settings.yaml is not a file`
+    if (errorMessage.trim().length > 0) {
+      debug.exit(1, `It seems like '${ENV.DIR}' is not a valid values repo.${errorMessage}`)
+    }
+  } catch (error) {
+    debug.exit(1, `It seems like '${ENV.DIR}' is not a valid values repo.\n${error.message}`)
+  }
+}
+
 try {
   parser.scriptName(otomi.scriptName)
-  if (ENV.DIR && readdirSync(ENV.DIR).length === 0) {
+  if (envDirContent.length === 0) {
     parser.command({ ...bootstrap, command: [bootstrap.command, '$0'] })
   } else {
     commands.map((cmd: CommandModule) =>
@@ -59,6 +78,11 @@ try {
         alias: 'ni',
         boolean: true,
         default: false,
+      },
+      trace: {
+        boolean: true,
+        default: false,
+        hidden: true,
       },
     })
     .wrap(Math.min(parser.terminalWidth() * terminalScale, 256 * terminalScale))

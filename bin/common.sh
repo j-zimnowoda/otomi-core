@@ -5,15 +5,22 @@ set -e
 shopt -s expand_aliases
 
 # Environment vars
-ENV_DIR=${ENV_DIR:-./env}
+ENV_DIR=${ENV_DIR:-$PWD}
+[ "$ENV_DIR" = '/home/app/stack' ] && ENV_DIR='/home/app/stack/env'
+[ -d $ENV_DIR/env/env ] && ENV_DIR=$ENV_DIR/env
+if [ -n "$TESTING" ]; then
+  CI=1
+  ENV_DIR="$PWD/tests/fixtures"
+fi
+[ -n "$VERBOSE" ] && echo "ENV_DIR: $ENV_DIR"
+
 LOG_LEVEL='--log-level warn'
 
 # Common vars
 readonly otomi_settings="$ENV_DIR/env/settings.yaml"
-readonly otomi_tools_image="otomi/tools:latest"
+readonly otomi_tools_image="otomi/core:latest"
 
 # Mutliple files vars
-readonly clusters_file="$ENV_DIR/env/cluster.yaml"
 readonly helmfile_output_hide="(^\W+$|skipping|basePath=)"
 readonly replace_paths_pattern="s@../env@${ENV_DIR}@g"
 
@@ -100,12 +107,9 @@ function _rind() {
   shift
   if [ $has_docker = 'true' ] && [ -z "$IN_DOCKER" ]; then
     docker run --rm \
-      -v ${ENV_DIR}:${ENV_DIR} \
-      -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
+      -v $ENV_DIR:$ENV_DIR \
       -e IN_DOCKER='1' \
-      -e GCLOUD_SERVICE_KEY="$GCLOUD_SERVICE_KEY" \
-      -e GOOGLE_APPLICATION_CREDENTIALS="$GOOGLE_APPLICATION_CREDENTIALS" \
-      -w ${ENV_DIR} \
+      -e ENV_DIR=$ENV_DIR \
       $otomi_tools_image $cmd "$@"
     return $?
   elif command -v $cmd &>/dev/null; then
@@ -125,9 +129,8 @@ function yq() {
   return $?
 }
 
-all_values=
 function yqr() {
-  [ -z "$all_values" ] && all_values=$(hf_values)
+  local all_values=$(hf_values)
   local ret=$(echo "$all_values" | yq r - "$@")
   [ -z "$ret" ] && return 1
   echo $ret
@@ -143,8 +146,9 @@ function get_k8s_version() {
 }
 
 function otomi_image_tag() {
-  local otomi_version=''
-  [ -f $clusters_file ] && otomi_version=$(yq r $clusters_file cluster.otomiVersion)
+  local otomi_version=$OTOMI_VERSION
+  [ -z "$otomi_version" ] && [ -f $otomi_settings ] && otomi_version=$(yq r $otomi_settings otomi.version)
+  [ -z "$otomi_version" ] && otomi_version=$(cat $PWD/package.json | jq -r .version)
   [ -z "$otomi_version" ] && otomi_version='master'
   echo $otomi_version
 }
@@ -171,38 +175,53 @@ function popd() {
 
 function crypt() {
   if [ ! -f "$ENV_DIR/.sops.yaml" ]; then
-    [ -n "$VERBOSE" ] && echo "No .sops.yaml found so skipping decryption"
+    [ -n "$VERBOSE" ] && echo "No .sops.yaml found so skipping crypt action"
     return 0
   fi
-  pushd $ENV_DIR/env
-  command=${1:-'decrypt'}
-  shift
-  files="$*"
-  local out='/dev/stdout'
-  [ -z "$VERBOSE" ] && out='/dev/null'
-  if [ -n "$files" ]; then
-    for f in $files; do
-      echo "${command}ing $f" >$out
-      drun "helm secrets enc ./env/$f" >$out
-    done
-  else
-    if [ "$command" = 'encrypt' ]; then
-      find . -type f -name 'secrets.*.yaml' -exec helm secrets enc {} \; >$out
-    else
-      find . -type f -name 'secrets.*.yaml' -exec helm secrets dec {} \; >$out
-    fi
-  fi
-  popd
-}
-
-function run_crypt() {
   if [ -n "$GCLOUD_SERVICE_KEY" ]; then
     GOOGLE_APPLICATION_CREDENTIALS="/tmp/key.json"
     echo $GCLOUD_SERVICE_KEY >$GOOGLE_APPLICATION_CREDENTIALS
     export GOOGLE_APPLICATION_CREDENTIALS=$GOOGLE_APPLICATION_CREDENTIALS
   fi
-  action=${1:-decrypt}
-  crypt $action
+  command=${1:-'dec'}
+  [ "$*" != "" ] && shift
+  files="$*"
+  local out='/dev/stdout'
+  [ -z "$VERBOSE" ] && out='/dev/null'
+  [ -z "$files" ] && files=$(find $ENV_DIR/env -type f -name 'secrets.*.yaml')
+  pushd $ENV_DIR
+  for file in $files; do
+    if [ "$command" = 'enc' ]; then
+      # somehow sops does not treat encryption with the same grace as decryption, and disregards timestamps
+      # so we check those and only encrypt when there is a change found in the .dec file
+      sec_diff=0
+      if [ -f $file.dec ]; then
+        [ -n "$VERBOSE" ] && echo "Found decrypted $file.dec. Calculating diff..."
+        sec_diff=$(expr $(stat -c %Y $file.dec) - $(stat -c %Y $file))
+        [ -n "$VERBOSE" ] && echo "Found timestamp diff in seconds: $sec_diff"
+      fi
+      if [ ! -f $file.dec ] || [ $sec_diff -gt 1 ]; then
+        helm secrets enc $file >$out
+        ts=$(stat -c %Y $file)
+        chek_ts=$(expr $ts + 1)
+        touch -d @$chek_ts $file.dec
+        [ -n "$VERBOSE" ] && echo "Set timestamp of decrypted file to that of source file: $chek_ts"
+      else
+        [ -n "$VERBOSE" ] && echo "Skipping encryption for $file as it is not changed."
+      fi
+    else
+      if helm secrets dec $file >$out; then
+        # we correct timestamp of decrypted file to match source file,
+        # in order to detect changes for conditional encryption
+        [ -n "$VERBOSE" ] && echo "Setting timestamp of decrypted file to that of source file."
+        ts=$(stat -c %Y $file)
+        chek_ts=$(expr $ts + 1)
+        touch -d @$chek_ts $file.dec
+        [ -n "$VERBOSE" ] && echo "Set timestamp of decrypted file to that of source file: $chek_ts"
+      fi
+    fi
+  done
+  popd
   unset GOOGLE_APPLICATION_CREDENTIALS
 }
 
@@ -228,4 +247,16 @@ function hf_template() {
     [ -z "$FILE_OPT" ] && [ -z "$LABEL_OPT" ] && hf -f helmfile.tpl/helmfile-init.yaml template --skip-deps $SKIP_CLEANUP
     hf template --skip-deps $SKIP_CLEANUP
   fi
+}
+
+function helm_adopt() {
+  release=$1
+  kind=$2
+  name=$3
+  namespace=$4
+  [ "$namespace" != '' ] && use_ns='-n $namespace'
+  kubectl $use_ns annotate --overwrite $kind $name meta.helm.sh/release-name=$release
+  kubectl $use_ns annotate --overwrite $kind $name meta.helm.sh/release-namespace=$namespace
+  kubectl $use_ns label --overwrite $kind $name app.kubernetes.io/managed-by=Helm
+
 }

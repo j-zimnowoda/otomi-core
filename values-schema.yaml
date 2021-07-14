@@ -1,10 +1,11 @@
 $schema: 'http://json-schema.org/draft-07/schema'
-additionalProperties: false
+additionalProperties: true
 definitions:
   rawValues:
     description: "May define value overrides for a chart. WARNING: these values currently have no schema and can't be validated as such, and may break deployment. You are on your own here."
     type: object
   alerts:
+    additionalProperties: false
     properties:
       drone:
         default: slack
@@ -18,9 +19,11 @@ definitions:
           critical:
             $ref: '#/definitions/email'
             description: One or more email addresses (comma separated) for critical events.
+            x-secret: true
           nonCritical:
             $ref: '#/definitions/email'
             description: One or more email addresses (comma separated) for non-critical events.
+            x-secret: true
       groupInterval:
         default: 5m
         description: How long to wait before sending a notification about new alerts that are added to a group of alerts for which an initial notification has already been sent. (Usually ~5m or more.)
@@ -31,9 +34,11 @@ definitions:
           highPrio:
             description: The low prio web hook.
             type: string
+            x-secret: true
           lowPrio:
             description: The high prio web hook.
             type: string
+            x-secret: true
       receivers:
         description: Notification receivers.
         items:
@@ -61,6 +66,48 @@ definitions:
           url:
             $ref: '#/definitions/url'
             description: A Slack webhook URL.
+            x-secret: true
+    allOf:
+      - anyOf:
+          - not:
+              required:
+                - receivers
+          - properties:
+              receivers:
+                contains:
+                  enum:
+                    - email
+            required:
+              - email
+          - properties:
+              receivers:
+                contains:
+                  enum:
+                    - msteams
+            required:
+              - msteams
+          - properties:
+              receivers:
+                contains:
+                  enum:
+                    - slack
+            required:
+              - slack
+      - anyOf:
+          - not:
+              required:
+                - drone
+          - properties:
+              drone:
+                const: msteam
+            required:
+              - msteam
+          - properties:
+              drone:
+                const: slack
+            required:
+              - slack
+
   annotations:
     $ref: '#/definitions/labelsAnnotations'
     description: A set of annotations.
@@ -76,92 +123,95 @@ definitions:
       minReplicas:
         type: integer
         default: 2
-  awsCreds:
-    properties:
-      aws:
-        properties:
-          accessKey:
-            type: string
-          secretKey:
-            type: string
-          region:
-            type: string
-        required:
-          - accessKey
-          - secretKey
-          - region
-    required:
-      - aws
-  azureCreds:
-    properties:
-      azure:
-        properties:
-          clientId:
-            type: string
-          clientSecret:
-            type: string
-          environment:
-            type: string
-          tenantId:
-            type: string
-        required:
-          - clientId
-          - clientSecret
-          - tenantId
-    required:
-      - azure
-  azureMonitor:
-    properties:
-      appInsightsApiKey:
-        title: AppInsights api key
-        description: An Azure AppInsights client secret.
+  aws:
+    definitions:
+      accessKey:
+        title: AWS access key
+        description: An AWS access key ID.
         type: string
-      appInsightsAppId:
-        title: AppInsights app id
-        description: An Azure AppInsights client id.
+        x-secret: true
+      region:
         type: string
-      azureLogAnalyticsSameAs:
-        title: LogAnalytics using same creds?
-        type: boolean
-        default: true
+      secretKey:
+        title: AWS secret key
+        description: An AWS secret key.
+        type: string
+        x-secret: true
+  azure:
+    definitions:
       clientId:
         title: Azure client id
         description: An Azure client id.
         type: string
+        x-secret: true
       clientSecret:
         title: Azure client secret
         description: An Azure client secret.
         type: string
-      logAnalyticsClientId:
-        title: LogAnalytics client id
-        description: An Azure client secret.
+        x-secret: true
+      environment:
+        title: Azure environment
+        description: An Azure environment. Don't specify this if you don't know what you are doing!
         type: string
-      logAnalyticsClientSecret:
-        title: LogAnalytics client secret
-        description: An Azure client secret.
-        type: string
-      logAnalyticsTenantId:
-        title: LogAnalytics tenant id
+        default: AzureCloud
+        enum:
+          - AzureCloud
+          - AzureChinaCloud
+          - AzureUSGovernment
+          - AzureGermanCloud
+      monitor:
+        additionalProperties: false
+        properties:
+          appInsightsApiKey:
+            $ref: '#/definitions/azure/definitions/clientSecret'
+            title: AppInsights api key
+            description: An Azure AppInsights client secret.
+          appInsightsAppId:
+            $ref: '#/definitions/azure/definitions/clientId'
+            title: AppInsights app id
+          azureLogAnalyticsSameAs:
+            title: LogAnalytics using same creds?
+            type: boolean
+            default: true
+          clientId:
+            $ref: '#/definitions/azure/definitions/clientId'
+          clientSecret:
+            $ref: '#/definitions/azure/definitions/clientSecret'
+          logAnalyticsClientId:
+            $ref: '#/definitions/azure/definitions/clientId'
+            title: LogAnalytics client id
+            description: An Azure client secret.
+          logAnalyticsClientSecret:
+            $ref: '#/definitions/azure/definitions/clientSecret'
+            title: LogAnalytics client secret
+            description: An Azure client secret.
+          logAnalyticsTenantId:
+            $ref: '#/definitions/azure/definitions/tenantId'
+            title: LogAnalytics tenant id
+            description: An Azure tenant id.
+          logAnalyticsDefaultWorkspace:
+            title: LogAnalytics default workspace to show
+            description: An Azure LogAnalytics workspace.
+            type: string
+          subscriptionId:
+            $ref: '#/definitions/azure/definitions/subscriptionId'
+          tenantId:
+            $ref: '#/definitions/azure/definitions/tenantId'
+        required:
+          - clientId
+          - clientSecret
+          - subscriptionId
+          - tenantId
+      tenantId:
+        title: Azure tenant id
         description: An Azure tenant id.
-        type: string
-      logAnalyticsDefaultWorkspace:
-        title: LogAnalytics default workspace to show
-        description: An Azure LogAnalytics workspace.
         type: string
       subscriptionId:
         title: Azure subscription id
         description: An Azure subscription id.
         type: string
-      tenantId:
-        title: LogAnalytics tenant id
-        description: An Azure monitor log analytics workspace.
-        type: string
-    required:
-      - clientId
-      - clientSecret
-      - subscriptionId
-      - tenantId
   cluster:
+    additionalProperties: false
     properties:
       apiName:
         description: Only used for API/UI to show in app.
@@ -178,10 +228,6 @@ definitions:
       k8sVersion:
         $ref: '#/definitions/k8sVersion'
       name:
-        type: string
-      otomiVersion:
-        default: latest
-        description: 'Best pin this to a valid release version found in the repo.'
         type: string
       provider:
         type: string
@@ -204,6 +250,7 @@ definitions:
       - name
       - provider
   containerSpec:
+    additionalProperties: false
     properties:
       image:
         $ref: '#/definitions/image'
@@ -249,9 +296,11 @@ definitions:
         type: string
       clientSecretValue:
         type: string
+        x-secret: true
   email:
     pattern: '^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$'
     type: string
+    nullable: true
   env:
     additionalProperties: false
     examples:
@@ -270,19 +319,20 @@ definitions:
     patternProperties:
       '^[/].*':
         type: string
-  googleCreds:
-    properties:
-      google:
-        properties:
-          accountJson:
-            type: string
-          project:
-            type: string
-    required:
-      - google
+  google:
+    additionalProperties: false
+    definitions:
+      accountJson:
+        type: string
+        x-secret: true
+      projectId:
+        type: string
   hostPort:
     pattern: '^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]):()([1-9]|[1-5]?[0-9]{2,4}|6[1-4][0-9]{3}|65[1-4][0-9]{2}|655[1-2][0-9]|6553[1-5])$'
     type: string
+  htpasswd:
+    type: string
+    x-secret: true
   idName:
     description: A lowercase name that starts with a letter and may contain dashes.
     pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
@@ -330,6 +380,7 @@ definitions:
           - $ref: '#/definitions/podSpec'
     type: array
   jobSpec:
+    additionalProperties: false
     properties:
       type:
         default: Job
@@ -377,12 +428,11 @@ definitions:
       - type
     type: object
   k8sVersion:
-    default: '1.19'
     description: The cluster k8s version. Otomi supports 2 minor versions backwards compatibility from the suggested default.
     enum:
-      - '1.17'
       - '1.18'
       - '1.19'
+      - '1.20'
     type: string
   labels:
     $ref: '#/definitions/labelsAnnotations'
@@ -390,8 +440,8 @@ definitions:
   labelsAnnotations:
     additionalProperties: false
     patternProperties:
-      ? '^((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]){1,253}\/)?([a-z0-9A-Z]+[a-z0-9A-Z-_.]+[a-z0-9A-Z]){1,63}$'
-      : pattern: '^((.){1,253}\/)?(.){1,63}$'
+      '^((([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9]){1,253}\/)?([a-z0-9A-Z]+[a-z0-9A-Z-_.]+[a-z0-9A-Z]){1,63}$':
+        pattern: '^((.){1,253}\/)?(.){1,63}$'
         type: string
   logLevel:
     type: string
@@ -438,6 +488,38 @@ definitions:
     maximum: 32768
     minimum: 80
     type: number
+  redisChart:
+    properties:
+      _rawValues:
+        $ref: '#/definitions/rawValues'
+      architecture:
+        type: string
+        enum:
+          - standalone
+          - replication
+        default: standalone
+      password:
+        type: string
+        x-secret: true
+      resources:
+        additionalProperties: false
+        properties:
+          master:
+            $ref: '#/definitions/resources'
+          sentinel:
+            $ref: '#/definitions/resources'
+          slave:
+            $ref: '#/definitions/resources'
+      sizes:
+        additionalProperties: false
+        properties:
+          master:
+            $ref: '#/definitions/size'
+          sentinel:
+            $ref: '#/definitions/size'
+          slave:
+            $ref: '#/definitions/size'
+    type: object
   securityContext:
     additionalProperties:
       uniqueItems: true
@@ -488,12 +570,20 @@ definitions:
         description: Requested resources (guaranteed).
     title: Pod resources
   scaling:
+    additionalProperties: false
     description: Min and max number of replicas.
     properties:
       maxReplicas:
         type: integer
       minReplicas:
         type: integer
+  size:
+    description: Disk size. Valid units are E|P|T|G|Ti|Gi.
+    examples:
+      - 1Gi
+      - 0.5Ti
+    pattern: '^([0-9]+\.)?[0-9]+(E|P|T|G||Ti|Gi)?$'
+    type: string
   subdomainType:
     type: string
     pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -598,7 +688,8 @@ definitions:
           workload:
             $ref: '#/definitions/labelsAnnotations'
       domain:
-        description: A custom service domain name.
+        description: A custom service domain name (max 64 bytes).
+        maxLength: 64
         type: string
       forwardPath:
         default: false
@@ -737,7 +828,7 @@ definitions:
       alerts:
         $ref: '#/definitions/alerts'
       azureMonitor:
-        $ref: '#/definitions/azureMonitor'
+        $ref: '#/definitions/azure/definitions/monitor'
       clusters:
         items:
           type: string
@@ -767,8 +858,10 @@ definitions:
       password:
         description: Will be used to separate team resources.
         type: string
+        x-secret: true
       resourceQuota:
         description: 'List of kubernetes resource quota. Should adhere to the "spec.hard" format as described here: https://kubernetes.io/docs/concepts/policy/resource-quotas/. Not validated as there is no schema published. Change at your own risk.'
+        type: object
       selfService:
         $ref: '#/definitions/teamSelfService'
       services:
@@ -813,10 +906,18 @@ definitions:
     type: array
   vaultCreds:
     properties:
+      provider:
+        type: string
+        const: vault
       vault:
         properties:
+          keys:
+            description: Comma separated list of one or two paths to keys as defined in Vault. One if used for both enc+dec. Two if one for enc, other for dec.
+            title: Vault keys
+            type: string
           token:
             type: string
+            x-secret: true
         required:
           - token
     required:
@@ -844,7 +945,23 @@ properties:
             description: Is this appgw installed as AKS addon?
             type: boolean
       monitor:
-        $ref: '#/definitions/azureMonitor'
+        $ref: '#/definitions/azure/definitions/monitor'
+  cloud:
+    additionalProperties: true
+    properties:
+      skipStorageClasses:
+        description:
+          List of storage classes to exclude from deployment, to avoid k8s errors due to patching not allowed.
+          This is a rather hacky way to circumvent the patching problem, going against idempotency, but we need it.
+          Without it we can't add new storageclasses to a cluster upgrading otomi.
+        type: array
+        items:
+          type: string
+          enum:
+            - std
+            - std-immediate
+            - fast
+            - fast-immediate
   charts:
     additionalProperties: true
     properties:
@@ -901,6 +1018,7 @@ properties:
             type: string
           adminToken:
             type: string
+            x-secret: true
           debug:
             default: false
             type: boolean
@@ -934,6 +1052,7 @@ properties:
           sharedSecret:
             description: A secret used by drone-admit-members plugin.
             type: string
+            x-secret: true
           sourceControl:
             additionalProperties: false
             properties:
@@ -944,12 +1063,15 @@ properties:
                   consumerKey:
                     default: consumerKey
                     type: string
+                    x-secret: true
                   passwordKey:
                     default: password
                     type: string
+                    x-secret: true
                   privateKey:
                     default: privateKey
                     type: string
+                    x-secret: true
                   server:
                     type: string
                   username:
@@ -1045,12 +1167,21 @@ properties:
             type: boolean
           adminPassword:
             type: string
+            x-secret: true
           postgresqlPassword:
             type: string
             description: Once set and deployed it cannot be changed with manual intervention.
-        required:
-          - enabled
-          - postgresqlPassword
+            x-secret: true
+        allOf:
+          - anyOf:
+              - not:
+                  properties:
+                    enabled:
+                      const: true
+                  required:
+                    - enabled
+              - required:
+                  - postgresqlPassword
       harbor:
         additionalProperties: false
         properties:
@@ -1058,18 +1189,22 @@ properties:
             $ref: '#/definitions/rawValues'
           adminPassword:
             type: string
+            x-secret: true
           core:
             properties:
               secret:
                 type: string
+                x-secret: true
               xsrfKey:
                 type: string
+                x-secret: true
           enabled:
             type: boolean
           jobservice:
             properties:
               secret:
                 type: string
+                x-secret: true
           persistence:
             additionalProperties: false
             properties:
@@ -1081,11 +1216,11 @@ properties:
                     additionalProperties: false
                     properties:
                       accesskey:
-                        type: string
+                        $ref: '#/definitions/aws/definitions/accessKey'
                       secretkey:
-                        type: string
+                        $ref: '#/definitions/aws/definitions/secretKey'
                       region:
-                        type: string
+                        $ref: '#/definitions/aws/definitions/region'
                       regionendpoint:
                         type: string
                       bucket:
@@ -1115,6 +1250,7 @@ properties:
                         type: string
                       accountkey:
                         type: string
+                        x-secret: true
                       container:
                         type: string
                       realm:
@@ -1126,6 +1262,7 @@ properties:
                         type: string
                       encodedkey:
                         type: string
+                        x-secret: true
                       rootdirectory:
                         type: string
                   type:
@@ -1134,14 +1271,21 @@ properties:
             properties:
               secret:
                 type: string
+                x-secret: true
               credentials:
                 properties:
                   htpasswd:
-                    type: string
+                    $ref: '#/definitions/htpasswd'
                   username:
                     type: string
                   password:
                     type: string
+                    x-secret: true
+                required:
+                  - htpasswd
+            required:
+              - secret
+              - credentials
           resources:
             additionalProperties: false
             properties:
@@ -1161,8 +1305,15 @@ properties:
                 $ref: '#/definitions/resources'
               portal:
                 $ref: '#/definitions/resources'
+              redis:
+                $ref: '#/definitions/resources'
+              registry:
+                $ref: '#/definitions/resources'
+              registry-controller:
+                $ref: '#/definitions/resources'
           secretKey:
             type: string
+            x-secret: true
       hello:
         properties:
           enabled:
@@ -1181,6 +1332,8 @@ properties:
         properties:
           _rawValues:
             $ref: '#/definitions/rawValues'
+          enabled:
+            type: boolean
           appgw:
             additionalProperties: false
             description: Application Gateway.
@@ -1221,9 +1374,17 @@ properties:
                 type: string
             required:
               - secretJSON
-        required:
-          - armAuth
-          - appgw
+        allOf:
+          - anyOf:
+              - not:
+                  properties:
+                    enabled:
+                      const: true
+                  required:
+                    - enabled
+              - required:
+                  - armAuth
+                  - appgw
       istio:
         additionalProperties: false
         properties:
@@ -1326,9 +1487,11 @@ properties:
                 type: string
               clientSecret:
                 type: string
+                x-secret: true
           postgresqlPassword:
             type: string
             description: Once set and deployed it cannot be changed with manual intervention.
+            x-secret: true
           resources:
             additionalProperties: false
             properties:
@@ -1352,8 +1515,17 @@ properties:
           postgresqlPassword:
             type: string
             description: Once set and deployed it cannot be changed with manual intervention.
-        required:
-          - postgresqlPassword
+            x-secret: true
+        allOf:
+          - anyOf:
+              - not:
+                  properties:
+                    enabled:
+                      const: true
+                  required:
+                    - enabled
+              - required:
+                  - postgresqlPassword
       kubernetes-external-secrets:
         additionalProperties: false
         properties:
@@ -1375,6 +1547,7 @@ properties:
             $ref: '#/definitions/rawValues'
           adminPassword:
             type: string
+            x-secret: true
           persistence:
             additionalProperties: false
             properties:
@@ -1400,6 +1573,7 @@ properties:
             properties:
               account_key:
                 type: string
+                x-secret: true
               account_name:
                 type: string
               container_name:
@@ -1430,6 +1604,8 @@ properties:
             description: Set this to a date just after deployment in case of an upgrade. (Otomi started at v9 with filesystem.)
             title: Schema v11 start date
             type: string
+        required:
+          - adminPassword
       nginx-ingress:
         additionalProperties: false
         properties:
@@ -1444,16 +1620,25 @@ properties:
           maxBodySize:
             type: string
             default: 1024m
+          maxBodySizeBytes:
+            type: number
+            default: 1073741824
+            description: Needed for modsecurity. Should correspond to maxBodySize, but expressed in bytes.
           modsecurity:
             title: MOD Security
             description: Enables MOD Security functionality.
             properties:
+              block:
+                description: Makes nginx block requests that are marked as violating the modsec rules.
+                type: boolean
+                default: true
               enabled:
                 type: boolean
                 default: false
               owasp:
+                description: Turns on the default OWASP rule set for modsec. See
                 type: boolean
-                default: false
+                default: true
             type: object
           resources:
             $ref: '#/definitions/resources'
@@ -1494,28 +1679,9 @@ properties:
                 description: Cookie secret must be 128 bit base64 encoded string.
                 pattern: '^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$'
                 type: string
+                x-secret: true
       oauth2-proxy-redis:
-        additionalProperties: false
-        properties:
-          _rawValues:
-            $ref: '#/definitions/rawValues'
-          architecture:
-            type: string
-            enum:
-              - standalone
-              - replication
-            default: standalone
-          password:
-            type: string
-          resources:
-            additionalProperties: false
-            properties:
-              master:
-                $ref: '#/definitions/resources'
-              sentinel:
-                $ref: '#/definitions/resources'
-              slave:
-                $ref: '#/definitions/resources'
+        $ref: '#/definitions/redisChart'
       otomi-api:
         additionalProperties: false
         properties:
@@ -1532,6 +1698,7 @@ properties:
                 type: string
               password:
                 type: string
+                x-secret: true
               repoUrl:
                 $ref: '#/definitions/repoUrl'
               user:
@@ -1557,26 +1724,6 @@ properties:
             $ref: '#/definitions/rawValues'
           image:
             $ref: '#/definitions/imageSimple'
-      pullsecret-patcher:
-        additionalProperties: false
-        properties:
-          enabled:
-            type: boolean
-            default: false
-          env:
-            $ref: '#/definitions/env'
-          registry:
-            properties:
-              username:
-                type: string
-              password:
-                type: string
-              email:
-                type: string
-                default: not@us.ed
-              server:
-                type: string
-                default: docker.io
         allOf:
           - anyOf:
               - not:
@@ -1601,6 +1748,7 @@ properties:
             properties:
               adminPassword:
                 type: string
+                x-secret: true
           prometheus:
             additionalProperties: false
             properties:
@@ -1611,24 +1759,13 @@ properties:
             properties:
               grafana:
                 $ref: '#/definitions/resources'
-        required:
-          - grafana
       redis-shared:
-        additionalProperties: false
-        properties:
-          _rawValues:
-            $ref: '#/definitions/rawValues'
-          enabled:
-            type: boolean
-          resources:
-            additionalProperties: false
-            properties:
-              master:
-                $ref: '#/definitions/resources'
-              sentinel:
-                $ref: '#/definitions/resources'
-              slave:
-                $ref: '#/definitions/resources'
+        allOf:
+          - $ref: '#/definitions/redisChart'
+          - properties:
+              enabled:
+                type: boolean
+                default: false
       sitespeed:
         additionalProperties: false
         properties:
@@ -1689,6 +1826,7 @@ properties:
                         type: string
                       secret_key:
                         type: string
+                        x-secret: true
                       endpoint:
                         type: string
                     required:
@@ -1710,6 +1848,7 @@ properties:
                         type: string
                       client_secret:
                         type: string
+                        x-secret: true
                     required:
                       - vault_name
                       - tenant_id
@@ -1785,6 +1924,7 @@ properties:
                     title: Client secret
                     type: string
                     description: Azure Application Client Secret
+                    x-secret: true
                   useManagedIdentityExtension:
                     title: Using managed identities?
                     type: boolean
@@ -1801,10 +1941,10 @@ properties:
               google:
                 properties:
                   serviceAccountKey:
-                    description: A service account key for managing a DNS zone.
-                    type: string
+                    $ref: '#/definitions/google/definitions/accountJson'
+                    description: A service account key in json format for managing a DNS zone.
                   project:
-                    type: string
+                    $ref: '#/definitions/google/definitions/projectId'
                 required:
                   - serviceAccountKey
                   - project
@@ -1837,9 +1977,51 @@ properties:
     properties:
       sops:
         oneOf:
-          - $ref: '#/definitions/awsCreds'
-          - $ref: '#/definitions/azureCreds'
-          - $ref: '#/definitions/googleCreds'
+          - properties:
+              provider:
+                type: string
+                const: aws
+              aws:
+                properties:
+                  keys:
+                    description: Comma separated list of one or two ARNs to keys as defined in AWS KMS. One if used for both enc+dec. Two if one for enc, other for dec.
+                    title: AWS KMS keys
+                    type: string
+                  region:
+                    $ref: '#/definitions/aws/definitions/region'
+            required:
+              - aws
+          - properties:
+              provider:
+                type: string
+                const: azure
+              azure:
+                properties:
+                  keys:
+                    description: Comma separated list of one or two paths to keys as defined in Azure Keyvault. One if used for both enc+dec. Two if one for enc, other for dec.
+                    title: Azure Keyvault keys
+                    type: string
+                  tenantId:
+                    $ref: '#/definitions/azure/definitions/tenantId'
+            required:
+              - azure
+          - properties:
+              provider:
+                type: string
+                const: google
+              google:
+                properties:
+                  keys:
+                    description: Comma separated list of one or two paths to keys as defined in GCP KMS. One if used for both enc+dec. Two if one for enc, other for dec.
+                    title: GCP KMS keys
+                    type: string
+                  accountJson:
+                    $ref: '#/definitions/google/definitions/accountJson'
+                  project:
+                    $ref: '#/definitions/google/definitions/projectId'
+            required:
+              - google
+
           - $ref: '#/definitions/vaultCreds'
   letsencryptCA:
     type: string
@@ -1847,22 +2029,27 @@ properties:
     type: string
   oidc:
     additionalProperties: false
-    description: 'Holds many parts used in different locations. Please see keycloak, istio and oauth-proxy all consuming parts.'
+    description: 'Holds many parts used in different locations. Please see keycloak, grafana, istio and oauth-proxy as those are all consuming (parts of) these settings.'
     properties:
       adminGroupID:
         type: string
       apiUrl:
         $ref: '#/definitions/url'
+        description: Only used for grafana when Keycloak is disabled. (Not recommended because that disables authorization.)
       authUrl:
         $ref: '#/definitions/url'
+        description: Only used for grafana when Keycloak is disabled. (Not recommended because that disables authorization.)
       clientID:
         type: string
       clientSecret:
         type: string
+        x-secret: true
       issuer:
         $ref: '#/definitions/url'
       scope:
         type: string
+        default: openid email profile
+        description: Default values are used by keycloak. May be overridden in case keycloak is disabled.
       teamAdminGroupID:
         type: string
       tenantID:
@@ -1871,11 +2058,12 @@ properties:
         $ref: '#/definitions/url'
       usernameClaimMapper:
         type: string
-        description: 'Claim name used by Keycloak to identify incoming users from identity provider'
+        description: Claim name used by Keycloak to identify incoming users from identity provider
+        default: '${CLAIM.email}'
       subClaimMapper:
         type: string
-        description: 'Select OIDC claim to be used as a unique user identifier'
-        default: 'sub'
+        description: Select OIDC claim to be passed by Keycloak as a unique user identifier. Best to not change this from the default.
+        default: sub
   otomi:
     additionalProperties: false
     properties:
@@ -1886,6 +2074,28 @@ properties:
       adminPassword:
         type: string
         default: bladibla
+        x-secret: true
+      globalPullSecret:
+        title: Global pullsecret
+        description: Will be connected to each "default" service account in all otomi app namespaces.
+          Handy for authenticating with DockerHub to avoid rate limiting.
+          Also useful when pulling all otomi images from a private repo. (One would need to override all the images in the config first.)
+        additionalProperties: false
+        properties:
+          username:
+            type: string
+          password:
+            type: string
+            x-secret: true
+          email:
+            type: string
+            default: not@us.ed
+          server:
+            type: string
+            default: docker.io
+        required:
+          - username
+          - password
       hasCloudLB:
         default: false
         description: 'Set this to true when an external LB exists or needs to be started (AWS ALB, Azure AppGW, Google Apigee). This will then be configured through ingress controllers. Expects existing LBs to terminate https. Currently this is only working correctly for Azure, and not for AWS and Google. AWS is close to completion.'
@@ -1913,16 +2123,11 @@ properties:
         default: ''
         description: The pullsecret to deploy the Otomi API and Console. Requires an Otomi license.
         type: string
-      addons:
-        description: Manage addon configuration
-        additionalProperties: false
-        properties:
-          conftest:
-            properties:
-              enabled:
-                type: boolean
-                default: true
-                description: Use this flag to enable conftest for policy validation
+        x-secret: true
+      version:
+        default: latest
+        description: 'Best pin this to a valid release version found in the repo.'
+        type: string
     required:
       - adminPassword
   policies:
@@ -2163,8 +2368,10 @@ properties:
         type: string
       auth_password:
         type: string
+        x-secret: true
       auth_secret:
         type: string
+        x-secret: true
       auth_username:
         type: string
       from:

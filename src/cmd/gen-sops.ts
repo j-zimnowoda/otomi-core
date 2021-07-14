@@ -8,8 +8,6 @@ import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setu
 
 export interface Arguments extends BasicArguments {
   dryRun: boolean
-  d: boolean
-  'dry-run': boolean
 }
 
 const fileName = 'gen-sops'
@@ -37,10 +35,10 @@ const setup = async (argv: Arguments, options?: PrepareEnvironmentOptions): Prom
 
 export const genSops = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
   await setup(argv, options)
-  const currDir = await ENV.PWD
+  const currDir = ENV.PWD
   const hfVals = await hfValues()
-  const provider = hfVals.kms?.sops?.provider
-  if (!provider) debug.exit(0, 'No sops information given. Assuming no sops enc/decryption needed.')
+  const provider = hfVals?.kms?.sops?.provider
+  if (!provider) throw new Error('No sops information given. Assuming no sops enc/decryption needed.')
 
   const targetPath = `${ENV.DIR}/.sops.yaml`
   const templatePath = `${currDir}/tpl/.sops.yaml`
@@ -59,8 +57,12 @@ export const genSops = async (argv: Arguments, options?: PrepareEnvironmentOptio
   }
 
   if (provider === 'google') {
-    debug.log('Creating gcp-key.json for vscode.')
-    writeFileSync(`${ENV.DIR}/gcp-key.json`, process.env.GCLOUD_SERVICE_KEY ?? '')
+    if (process.env.GCLOUD_SERVICE_KEY) {
+      debug.log('Creating gcp-key.json for vscode.')
+      writeFileSync(`${ENV.DIR}/gcp-key.json`, JSON.stringify(JSON.parse(process.env.GCLOUD_SERVICE_KEY), null, 2))
+    } else {
+      debug.log('`GCLOUD_SERVICE_KEY` environment variable is not set, cannot create gcp-key.json.')
+    }
   }
 }
 
@@ -80,7 +82,11 @@ export const module = {
 
   handler: async (argv: Arguments): Promise<void> => {
     ENV.PARSED_ARGS = argv
-    await genSops(argv, {})
+    try {
+      await genSops(argv, {})
+    } catch (error) {
+      debug.exit(0, error.message)
+    }
   },
 }
 

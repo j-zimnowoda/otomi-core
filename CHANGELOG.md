@@ -2,6 +2,128 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.13.11](https://github.com/redkubes/otomi-core/compare/v0.13.10...v0.13.11) (2021-07-05)
+
+
+### Bug Fixes
+
+* drone gen ([94ad6f7](https://github.com/redkubes/otomi-core/commit/94ad6f74a0d206bff72eb9a5a4cef7e6f3bc0afc))
+* harbor regression due to new chart ([fe03f90](https://github.com/redkubes/otomi-core/commit/fe03f904f162e73d61e50729ab9e1adf9ed673f0))
+* harbor tasks updated to new version ([4becbeb](https://github.com/redkubes/otomi-core/commit/4becbeb1ecde85816dc0a97add6c3d59acc5162e))
+* kured resources ([9f6720b](https://github.com/redkubes/otomi-core/commit/9f6720b685f08b4ad64358d141e0f69a07550261))
+* seemingly harmless comment not allowed ([055c580](https://github.com/redkubes/otomi-core/commit/055c580ba97654d4aea8a468600bbdacbbc2bc0d))
+
+### [0.13.10](https://github.com/redkubes/otomi-core/compare/v0.13.9...v0.13.10) (2021-07-05)
+
+
+### Bug Fixes
+
+* core version not found in container ([8329a49](https://github.com/redkubes/otomi-core/commit/8329a4901f37c1185d5fcfc31752abf11bba69e9))
+* harbor db perms again...grrrrmbl ([d2f2cb4](https://github.com/redkubes/otomi-core/commit/d2f2cb489979444bd747152f9d140bf575b19b3a))
+
+
+### Others
+
+* **release:** 0.13.9 ([6b746bb](https://github.com/redkubes/otomi-core/commit/6b746bb7751f7df7b5187060ce407abcae236852))
+
+### [0.13.9](https://github.com/redkubes/otomi-core/compare/v0.13.8...v0.13.9) (2021-07-04)
+
+
+### Bug Fixes
+
+* regression [ci skip] ([20adace](https://github.com/redkubes/otomi-core/commit/20adace3f9ebae6d79b33315907dd4840c3bc679))
+
+### [0.13.8](https://github.com/redkubes/otomi-core/compare/v0.13.7...v0.13.8) (2021-07-04)
+
+
+### Features
+
+* skip storage classes to circumvent patching errors ([7cd2973](https://github.com/redkubes/otomi-core/commit/7cd297342bc16e843133ea8e705db0896a70fbcf))
+
+
+### Bug Fixes
+
+* decrypt before values command ([da97ebb](https://github.com/redkubes/otomi-core/commit/da97ebb42b1aae76c3e28a17d0e97b49bfc6f96c))
+* gitea push robustness ([13b648b](https://github.com/redkubes/otomi-core/commit/13b648b6b7d1f473b4187baa75e98604a0eab5f3))
+* harbor chart, redis config, disk sizes ([a6df5a2](https://github.com/redkubes/otomi-core/commit/a6df5a29b84d20933f42d5c7dce488b273e01ef8))
+* pre-commit ([3c2a85b](https://github.com/redkubes/otomi-core/commit/3c2a85bbfda5044605cd8975fae2e8dace3346b9))
+* remove -x ([34263dd](https://github.com/redkubes/otomi-core/commit/34263dddcf56fe08680cc8f8c5e7af396803dbca))
+* reverting back the readme file. ([#460](https://github.com/redkubes/otomi-core/issues/460)) ([72fadfd](https://github.com/redkubes/otomi-core/commit/72fadfdfac9e528b753373f77768d9323f6cc017))
+* schema for redis [ci skip] ([76c15bd](https://github.com/redkubes/otomi-core/commit/76c15bd9cce54e24634ab64c818f0ec5fbc18116))
+* schema required fields and decrypted file extension toggle ([eb5cf18](https://github.com/redkubes/otomi-core/commit/eb5cf1833a4bc313369defd0fd8ea9a2f9442420))
+* set maxlength of dns ([#456](https://github.com/redkubes/otomi-core/issues/456)) ([9f1ecb1](https://github.com/redkubes/otomi-core/commit/9f1ecb18855e5db021c58ad8b45a693ac93eacd3))
+* storageclass default not premium ([02edec9](https://github.com/redkubes/otomi-core/commit/02edec99a0c9e63179b82cfb4382049a9f8cd7a0))
+* storageclass schema, k8s versions ([8390a24](https://github.com/redkubes/otomi-core/commit/8390a24ff195e7fc50c1efca25f48149beaa9b85))
+
+### [0.13.7](https://github.com/redkubes/otomi-core/compare/v0.13.6...v0.13.7) (2021-06-30)
+
+
+### Features
+
+* adding encryption to the otomi helm chart ([17bf7a8](https://github.com/redkubes/otomi-core/commit/17bf7a869c90db17d072e69954373da593da4ac0))
+* chart release pipeline ([7c81572](https://github.com/redkubes/otomi-core/commit/7c815726f6081c255b7744b75846adcb3e5eef17))
+* chart release pipeline ([5744d1b](https://github.com/redkubes/otomi-core/commit/5744d1b83c1ed7dd56d71b17ba7f4c25a91190c2))
+* chart release pipeline ([6bbb7b9](https://github.com/redkubes/otomi-core/commit/6bbb7b93dbd3dac4b332c8c470afc525122f09e4))
+* moving to alpha4 ([0492b26](https://github.com/redkubes/otomi-core/commit/0492b26c01c2f8d4df49b5dc013d5819741553eb))
+* nginx-ingress grafana dash [ci skip] ([8d1dbed](https://github.com/redkubes/otomi-core/commit/8d1dbed94770ae7be3c8856b6443bfac145abdb6))
+* otomi install chart ([#431](https://github.com/redkubes/otomi-core/issues/431)) ([16152b1](https://github.com/redkubes/otomi-core/commit/16152b1a8c00a345a3531d7dabf0293d0a28eca9))
+* user master tag for otomi/tasks image ([2b78538](https://github.com/redkubes/otomi-core/commit/2b78538f2187ca2a1b96f33fcb60e276ba79a553))
+
+
+### Bug Fixes
+
+* added type object to schema [ci skip] ([9a08c4f](https://github.com/redkubes/otomi-core/commit/9a08c4f91ca2bef9258a980e7a0ea0f5cb9399f7))
+* chart mods ([#458](https://github.com/redkubes/otomi-core/issues/458)) ([acf82f7](https://github.com/redkubes/otomi-core/commit/acf82f7b482f4310b1fee9e5f9fdffe5aad19b98))
+* chart release pipeline ([0302da0](https://github.com/redkubes/otomi-core/commit/0302da0140225f5bd203398a27064437b08d2844))
+* chart release pipeline ([435a12a](https://github.com/redkubes/otomi-core/commit/435a12ac986dfd9283e36d4110d55cb5c120a661))
+* chart release pipeline ([6d865e8](https://github.com/redkubes/otomi-core/commit/6d865e86384b19b887c86fa2f926650ab640c723))
+* chart release version ([45e27fc](https://github.com/redkubes/otomi-core/commit/45e27fcb447c0bc970eb1d6a66a2115f4d54c3fd))
+* chart version ([76cec33](https://github.com/redkubes/otomi-core/commit/76cec336ddb19136aa45fa131f95750e2dd4644a))
+* disabling profiles ([e075ca6](https://github.com/redkubes/otomi-core/commit/e075ca6a3c18c1751de1de10686ac9f90dc29af9))
+* first commit [ci skip] ([ba08847](https://github.com/redkubes/otomi-core/commit/ba088478371f1d88e1b1a7acc3294834b90cdab6))
+* fix the bug for file permissions after chart task ([0f05878](https://github.com/redkubes/otomi-core/commit/0f0587840d5ae3654e68717d56081e0d0cf451dd))
+* gen-drone dependent on otomi version change ([b5c90f9](https://github.com/redkubes/otomi-core/commit/b5c90f991a9d0609bd5b3e8cdf1d2ae03d9f6d52))
+* missing files, initial values now read [ci skip] ([ab4b6e7](https://github.com/redkubes/otomi-core/commit/ab4b6e7dda103740a98d4e18fde4e9778d68737f))
+* move sops gen to bootstrap [ci skip] ([13f6e96](https://github.com/redkubes/otomi-core/commit/13f6e961377078de579daed59dcdb20683f30a92))
+* namespaces for better cleanup ([18e6828](https://github.com/redkubes/otomi-core/commit/18e682872d46c65d09f29c72d85adfa6bb806512))
+* removing local test file ([09bfccf](https://github.com/redkubes/otomi-core/commit/09bfccf7ee445f9dc64ccd248ce674102be7d0b8))
+* removing redundant function ([623a340](https://github.com/redkubes/otomi-core/commit/623a34017161b8b6c2d81dbc4d81f09c6e77029a))
+* schema [ci skip] ([0620836](https://github.com/redkubes/otomi-core/commit/0620836faae68579ebca631e9541ff82e9f9dc61))
+* sops env, otomi chart tags ([dd3122f](https://github.com/redkubes/otomi-core/commit/dd3122f383dd1ad9726bb31bac13698e3bc7e045))
+* sops regex, serve handler output [ci skip] ([2469a07](https://github.com/redkubes/otomi-core/commit/2469a074483b3e5e5eca23d4cd70db88f1fa387e))
+* sops template ([bb8e56b](https://github.com/redkubes/otomi-core/commit/bb8e56b34c84eaa07d7fd96135eea7bf095272b3))
+
+
+### Others
+
+* **chart:** 0.13.0 ([7baaec4](https://github.com/redkubes/otomi-core/commit/7baaec439a3dc13435b419206bb0b641849d0e7c))
+* **chart:** 0.13.0 ([9872497](https://github.com/redkubes/otomi-core/commit/9872497d5c1e004e870e6a902886ba53b2c525f0))
+* **chart:** 0.13.1 ([9da62ac](https://github.com/redkubes/otomi-core/commit/9da62ac0079d63b90ff511c4bcb217015cd3e30b))
+* **chart:** 0.13.1 ([ae38658](https://github.com/redkubes/otomi-core/commit/ae38658c97a7bbb43b36b6d700c644a92207eb4d))
+* **chart:** 0.13.1 ([78df5b7](https://github.com/redkubes/otomi-core/commit/78df5b77cefa369343a9c1d3fbf6c48a6a7c1511))
+* **chart:** 0.13.1 ([4c53521](https://github.com/redkubes/otomi-core/commit/4c5352168613ef7609a01c00ede4c3c4eb6c56b6))
+* **chart:** 0.13.1 ([1848c2c](https://github.com/redkubes/otomi-core/commit/1848c2c3c6c1c63eadff5571180791e570ff04c1))
+* **chart:** 0.13.1 ([4a094bb](https://github.com/redkubes/otomi-core/commit/4a094bbcdde5c25ccedb3032ec1b13e87ab0a402))
+* **chart:** 0.13.1 ([b75c10f](https://github.com/redkubes/otomi-core/commit/b75c10fa97d992e07c987f9e2b88a31e44c43e4c))
+* **chart:** 0.13.1 ([b782425](https://github.com/redkubes/otomi-core/commit/b78242515db506508b0507e99ef5ecbe1d8d8f7e))
+* **chart:** 0.13.1 ([d478838](https://github.com/redkubes/otomi-core/commit/d4788383c7c36e63baf3294ffeb0c58c690714e0))
+* **chart:** 0.13.1 ([c04d36d](https://github.com/redkubes/otomi-core/commit/c04d36dfbd221677ef8873ded4d80dcc5b876584))
+* **chart:** 0.13.1 ([9071aa9](https://github.com/redkubes/otomi-core/commit/9071aa996397c2fe763902bec8516f521ff71578))
+* **chart:** 0.13.1 ([83138ab](https://github.com/redkubes/otomi-core/commit/83138ab46912c6fe41e68f99071d82d2cf7a72e9))
+* **chart:** 0.13.1 ([e7e7edb](https://github.com/redkubes/otomi-core/commit/e7e7edbb598b27a3037946fb640199221a829847))
+* **chart:** 0.13.1 ([0aa68d8](https://github.com/redkubes/otomi-core/commit/0aa68d8d4a686deba56ab68c510532edab7efce3))
+* **chart:** 0.13.1 ([1890b91](https://github.com/redkubes/otomi-core/commit/1890b916861434d9b091f1a5f5af42354008579e))
+* **chart:** 0.13.1 ([9d411ec](https://github.com/redkubes/otomi-core/commit/9d411eced6e475ff1772332d8180e7e484d69df9))
+* **chart:** 0.13.1 ([4225d5c](https://github.com/redkubes/otomi-core/commit/4225d5c63876e69ab6b8c7f76478e5523f471229))
+* **chart:** 0.13.1 ([2c49cce](https://github.com/redkubes/otomi-core/commit/2c49cceeb0d050320e9417de43640fc0716d527f))
+* **chart:** 0.13.1 ([713c26f](https://github.com/redkubes/otomi-core/commit/713c26f8592c12a91813c9aea010c2cd96423b05))
+* **chart:** 0.13.1 ([1b8ee20](https://github.com/redkubes/otomi-core/commit/1b8ee203e3dc254d579d7bd313ca04bc23f5be71))
+* **chart:** 0.13.1 ([bffd9cd](https://github.com/redkubes/otomi-core/commit/bffd9cdfe1f18e81e73ef75b7e48e1b1f4a9da31))
+* **chart:** 0.13.1 ([f62dc8e](https://github.com/redkubes/otomi-core/commit/f62dc8e38a43b99c237d4f7625b315ade537265b))
+* **chart:** 0.13.1 ([b028253](https://github.com/redkubes/otomi-core/commit/b0282531e0efc67ccd35a2d0e022a4a89c7b8e5c))
+* **chart:** 0.13.1 ([a84e002](https://github.com/redkubes/otomi-core/commit/a84e00269152027c444125d4713a6cdcd6167ce0))
+* **chart:** 0.13.1 ([113b9fa](https://github.com/redkubes/otomi-core/commit/113b9fad4e9a08784d7939df1740a2b3d656f2e7))
+
 ### [0.13.6](https://github.com/redkubes/otomi-core/compare/v0.13.5...v0.13.6) (2021-06-29)
 
 

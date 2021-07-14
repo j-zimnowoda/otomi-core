@@ -8,6 +8,7 @@
     "esbenp.prettier-vscode",
     "foxundermoon.shell-format",
     "jetmartin.bats",
+    "mads-hartmann.bash-ide-vscode",
     "ms-azuretools.vscode-docker",
     "ms-kubernetes-tools.vscode-kubernetes-tools",
     "pascalreitermann93.vscode-yaml-sort",

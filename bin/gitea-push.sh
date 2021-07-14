@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 . bin/common.sh
 
-run_crypt
+crypt
 
 readonly gitea_enabled=$(yqr charts.gitea.enabled)
-readonly stage=$(yqr charts.cert-manager.stage)
+readonly stage=$(yqr charts.cert-manager.stage || echo 'production')
 [ "$gitea_enabled" != "true" ] && echo "Gitea is disabled" && exit 0
 if [ "$stage" = "staging" ]; then
   function git() {
@@ -24,30 +24,26 @@ git_found=true
 if [ ! -d .git ]; then
   git init
   git checkout -b main
-  git_found=false
 fi
 
 git config user.name "Otomi Admin"
 git config user.email "otomi-admin@$cluster_domain"
-readonly remote_name="origin"
 
-if [ ! $(git config remote.$remote_name.url) ]; then
-  git remote add $remote_name "https://$gitea_user:$gitea_password@$gitea_url/$gitea_org/$gitea_repo.git"
+if [ ! $(git config remote.origin.url) ]; then
+  git remote add origin "https://$gitea_user:$gitea_password@$gitea_url/$gitea_org/$gitea_repo.git"
   echo "Added gitea as a remote origin"
-  echo "You can push using: \`git push main $remote_name\`"
+  echo "You can push using: \`git push main origin\`"
 fi
 
-# Try to pull, if repo is not new, it will get data
-if ! git fetch $remote_name main >/dev/null; then
-  if ! $git_found; then
-    git config user.name "Otomi Admin"
-    git config user.email "otomi-admin@$cluster_domain"
-  fi
+# Try to fetch to see if repo exists
+if ! git fetch origin main >/dev/null; then
+  # no, commit new values
+  set +e
   git add -A
   git commit --no-verify -m "automated commit of otomi-values"
-  git push -u $remote_name main -f
-  git branch --set-upstream-to=${remote_name}/main main
-
+  git push -u origin main -f
+  git branch
+  set -e
   echo "Otomi-values has been pushed to gitea"
 else
   echo "There is already data in gitea."

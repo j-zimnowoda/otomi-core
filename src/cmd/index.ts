@@ -18,6 +18,7 @@ import pullModule from './pull'
 import regCredModule from './regcred'
 import rotateKeysModule from './rotate-keys'
 import scoreTemplatesModule from './score-templates'
+import statusModule from './status'
 import syncModule from './sync'
 import templateModule from './template'
 import testModule from './test'
@@ -44,6 +45,7 @@ export { default as pull } from './pull'
 export { default as regCred } from './regcred'
 export { default as rotateKeys } from './rotate-keys'
 export { default as scoreTemplates } from './score-templates'
+export { default as status } from './status'
 export { default as sync } from './sync'
 export { default as template } from './template'
 export { default as test } from './test'
@@ -72,6 +74,7 @@ export const commands: CommandModule[] = [
   regCredModule,
   rotateKeysModule,
   scoreTemplatesModule,
+  statusModule,
   syncModule,
   templateModule,
   testModule,

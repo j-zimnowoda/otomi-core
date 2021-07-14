@@ -33,6 +33,10 @@ securityContext:
   runAsUser: 1000
 
 image:
+  {{- with .Values.otomi | get "globalPullSecret" nil }}
+  imagePullSecrets:
+    - name: otomi-pullsecret-global
+  {{- end }}
   tag: 1.14.2
   pullPolicy: IfNotPresent
   rootless: true
@@ -117,17 +121,6 @@ extraRootCA: |
   {{- $v.letsencryptCA | nindent 2 }}
 {{- end }}
 
-extraVolumes:
-- name: cert
-  secret:
-    secretName: letsencrypt-staging
-
-extraVolumeMounts:
-- name: cert
-  readOnly: true
-  mountPath: "/usr/local/share/ca-certificates"
-
-# Can't be used (until Gitea 1.14) as gitea requires root in the docker image
 securityContext:
   runAsNonRoot: true
   runAsUser: 1000
@@ -140,3 +133,9 @@ initPreScript: |
     sleep 5
   done
   echo READY!
+
+{{- with .Values.otomi | get "globalPullSecret" nil }}
+global:
+  imagePullSecrets:
+    - otomi-pullsecret-global
+{{- end }}

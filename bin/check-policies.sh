@@ -5,7 +5,7 @@ set -e
 . bin/common.sh
 . bin/common-modules.sh
 
-run_crypt
+crypt
 
 readonly k8s_resources_path="/tmp/otomi/templates"
 readonly policies_file="$ENV_DIR/env/policies.yaml"
@@ -36,8 +36,6 @@ check_policies() {
   grep "FAIL" $tmp_out >/dev/null && return 1
   return $ret
 }
-
-[ -f $otomi_settings ] && ! $(yq r $otomi_settings "otomi.addons.conftest.enabled") && echo "skipping" && exit 0
 
 function main() {
   echo $script_message STARTED
