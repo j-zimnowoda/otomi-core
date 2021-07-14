@@ -12,11 +12,13 @@ interface Arguments extends BasicArguments {
 
 const kindOptions: { [key: string]: Options } = {
   'delete-cluster': {
+    alias: 'dc',
     describe: 'Delete the cluster after running the test suite.',
     default: true,
     type: 'boolean',
   },
   'no-deploy': {
+    alias: 'nd',
     describe: 'Create the cluster without running the test suite.',
     default: false,
     type: 'boolean',
@@ -24,7 +26,7 @@ const kindOptions: { [key: string]: Options } = {
   wait: {
     alias: 'w',
     describe: 'Wait for the cluster to be ready before running the test suite.',
-    default: '0s',
+    default: '60s',
     type: 'string',
   },
 }
@@ -43,7 +45,7 @@ const cleanup = (argv: Arguments): void => {
 
 /* eslint-enable no-useless-return */
 const setup = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
-  await $`mkdir -p ~/.kube && touch ${ENV.KUBECONFIG} && chmod 600 ${ENV.KUBECONFIG}`
+  await $`mkdir -p ~/.kube && touch ${ENV.KUBECONFIG} && chmod +r ${ENV.KUBECONFIG}`
 
   if (argv._[0] === fileName) cleanupHandler(() => cleanup(argv))
   debug = terminal(fileName)
@@ -54,7 +56,11 @@ const setup = async (argv: Arguments, options?: PrepareEnvironmentOptions): Prom
 export const kind = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
   await setup(argv, options)
 
-  await $`kind create cluster --wait ${argv.wait} --name ${name} --kubeconfig ${ENV.KUBECONFIG} --image kindest/node:${tags[0]}`
+  await $`kind create cluster --wait ${argv.wait} \
+  --name ${name} \
+  --kubeconfig ${ENV.KUBECONFIG} \
+  --image kindest/node:${tags[0]} \
+  --config=kind-config.yaml`
 
   if (!argv.noDeploy) {
     try {

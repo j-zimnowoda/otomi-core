@@ -3,17 +3,17 @@
 
 set -x
 
-# run_crypt
+run_crypt
 
 # # install some stuff that we never want to end up as charts
 hf -f helmfile.tpl/helmfile-init.yaml template | kubectl apply -f -
 # # and prometheus-operator crds so charts can deploy ServiceMonitor
-# kubectl apply -f charts/prometheus-operator/crds
+kubectl apply -f charts/prometheus-operator/crds
 
-# # helm charts after
-# hf -l stage!=post apply --skip-deps
+# helm charts after
+hf -l stage!=post apply --skip-deps
 
-# # Post deploy tasks
-# [ -z "$CI" ] && bin/gen-drone.sh && bin/gitea-push.sh
+# Post deploy tasks
+[ -z "$CI" ] && bin/gen-drone.sh && bin/gitea-push.sh
 
-# hf -l stage=post apply --skip-deps
+hf -l stage=post apply --skip-deps
