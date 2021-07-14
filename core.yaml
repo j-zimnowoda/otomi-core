@@ -20,6 +20,8 @@ apps:
 
 k8s:
   namespaces:
+    - name: cert-manager
+      disableIstioInjection: true
     - name: default
       disableIstioInjection: true
       disablePolicyChecks: true
@@ -33,7 +35,13 @@ k8s:
     - name: istio-system
       disableIstioInjection: true
     - name: ingress
+    - name: jaeger
+    - name: jaeger-operator
+      disableIstioInjection: true
     - name: keycloak
+    - name: kiali
+    - name: kiali-operator
+      disableIstioInjection: true
     - name: knative-serving
       disablePolicyChecks: true
     - name: kubeapps
@@ -69,14 +77,14 @@ services:
     type: public
     auth: true
   - name: harbor
-    svc: harbor-harbor-portal
+    svc: harbor-portal
     namespace: harbor
     ownHost: true
     isShared: true
     type: public
     auth: true
   - name: harbor
-    svc: harbor-harbor-core
+    svc: harbor-core
     namespace: harbor
     ownHost: true
     paths: [/api/, /c/, /chartrepo/]
@@ -86,7 +94,7 @@ services:
     type: public
     auth: true
   - name: harbor
-    svc: harbor-harbor-core
+    svc: harbor-core
     namespace: harbor
     ownHost: true
     paths: [/service/, /v1/, /v2/]
@@ -109,7 +117,7 @@ services:
     type: public
     auth: true
   - name: notary
-    svc: harbor-harbor-notary-server
+    svc: harbor-notary-server
     port: 4443
     namespace: harbor
     ownHost: true
@@ -220,7 +228,7 @@ services:
 teamConfig:
   services:
     - name: harbor
-      svc: harbor-harbor-portal
+      svc: harbor-portal
       namespace: harbor
       isShared: true
       host: harbor

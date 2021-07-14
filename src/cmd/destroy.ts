@@ -3,9 +3,10 @@ import { Argv } from 'yargs'
 import { $ } from 'zx'
 import { OtomiDebugger, terminal } from '../common/debug'
 import { Arguments, helmOptions } from '../common/helm-opts'
-import { hf, hfTrimmed } from '../common/hf'
+import { hf, hfStream } from '../common/hf'
 import { ENV, LOG_LEVEL_STRING } from '../common/no-deps'
 import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setup'
+import { ProcessOutputTrimmed } from '../common/zx-enhance'
 import { decrypt } from './decrypt'
 
 const fileName = 'destroy'
@@ -29,7 +30,13 @@ const destroyAll = async () => {
   await $`kubectl -n olm delete deploy --all`
   await hf({ args: 'destroy' })
 
-  const templateOutput: string = await hf({ fileOpts: 'helmfile.tpl/helmfile-init.yaml', args: 'template' })
+  const output: ProcessOutputTrimmed = await hf({ fileOpts: 'helmfile.tpl/helmfile-init.yaml', args: 'template' })
+  if (output.exitCode > 0) {
+    debug.exit(output.exitCode, output.stderr)
+  } else if (output.stderr.length > 0) {
+    debug.error(output.stderr)
+  }
+  const templateOutput: string = output.stdout
   writeFileSync(templateFile, templateOutput)
   await $`kubectl delete -f ${templateFile}`
 
@@ -58,18 +65,19 @@ const destroyAll = async () => {
 
 export const destroy = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
   await setup(argv, options)
-  await decrypt(argv)
   debug.verbose('Start destroy')
   if (!argv.label && !argv.file) {
     destroyAll()
   } else {
-    const output = await hfTrimmed({
-      fileOpts: argv.file,
-      labelOpts: argv.label,
-      logLevel: LOG_LEVEL_STRING(),
-      args: 'destroy',
-    })
-    debug.verbose(output)
+    await hfStream(
+      {
+        fileOpts: argv.file,
+        labelOpts: argv.label,
+        logLevel: LOG_LEVEL_STRING(),
+        args: 'destroy',
+      },
+      { trim: true, streams: { stdout: debug.stream.log } },
+    )
   }
 }
 

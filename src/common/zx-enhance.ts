@@ -1,6 +1,7 @@
 import * as dotenv from 'dotenv'
 import { existsSync } from 'fs'
-import { $, chalk, question } from 'zx'
+import { $, chalk, ProcessOutput, ProcessPromise, question } from 'zx'
+import { DebugStream } from './debug'
 import { ENV } from './no-deps'
 
 const MAX_RETRIES_QUESTION = 3
@@ -58,7 +59,7 @@ export const ask = async (query: string, options?: AskType): Promise<string> => 
     [...new Set(matching.map((val) => val.toLowerCase()))].includes(answer.toLowerCase())
   const matchingFn = options?.matchingFn ?? defaultMatchingFn
 
-  if (process.env.CI) return defaultAnswer
+  if (ENV.isCI) return defaultAnswer
   let answer = ''
   let tries = 0
   let matches = false
@@ -86,4 +87,38 @@ export const askYesNo = async (query: string, option?: { defaultYes?: boolean })
   })
 
   return yes.includes(answer.length > 0 ? answer : defaultAnswer)
+}
+
+export type Streams = {
+  stdout?: DebugStream
+  stderr?: DebugStream
+}
+export const stream = (cmd: ProcessPromise<ProcessOutput>, streams?: Streams): ProcessPromise<ProcessOutput> => {
+  if (streams?.stdout) cmd.stdout.pipe(streams.stdout)
+  if (streams?.stderr) cmd.stderr.pipe(streams.stderr)
+  return cmd
+}
+
+export class ProcessOutputTrimmed {
+  #po: ProcessOutput
+
+  constructor(processOutput: ProcessOutput) {
+    this.#po = processOutput
+  }
+
+  get exitCode(): number {
+    return this.#po.exitCode
+  }
+
+  get stdout(): string {
+    return this.#po.stdout.trim()
+  }
+
+  get stderr(): string {
+    return this.#po.stderr.trim()
+  }
+
+  toString(): string {
+    return this.#po.toString()
+  }
 }

@@ -1,0 +1,1 @@
+{{- $v := (readFile(fmt.Sprintf("%s/env/env/cluster.yaml", os.getEnv("ENV_DIR")) | fromYaml) }}

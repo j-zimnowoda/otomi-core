@@ -39,7 +39,7 @@ resources:
 image:
   registry: docker.io
   repository: otomi/console
-  tag: {{ $o | get "image.tag" "v0.4.44" }}
+  tag: {{ $o | get "image.tag" "v0.4.50" }}
   pullPolicy: {{ $o | get "image.pullPolicy" "IfNotPresent" }}
 
 env:
@@ -57,3 +57,7 @@ podAnnotations:
   policy.otomi.io/ignore: "banned-image-tags,psp-allowed-users"
   policy.otomi.io/ignore.wget: "container-limits"
 
+{{- with .Values.otomi | get "globalPullSecret" nil }}
+imagePullSecrets:
+  - name: otomi-pullsecret-global
+{{- end }}

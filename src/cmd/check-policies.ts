@@ -1,11 +1,10 @@
 import { rmSync } from 'fs'
-import { load } from 'js-yaml'
 import { Argv } from 'yargs'
 import { $, nothrow } from 'zx'
 import { OtomiDebugger, terminal } from '../common/debug'
 import { Arguments, helmOptions } from '../common/helm-opts'
 import { hfTemplate } from '../common/hf'
-import { ENV } from '../common/no-deps'
+import { ENV, loadYaml, LOG_LEVEL, LOG_LEVELS } from '../common/no-deps'
 import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setup'
 
 const fileName = 'check-policies'
@@ -29,7 +28,7 @@ export const checkPolicies = async (argv: Arguments, options?: PrepareEnvironmen
   await setup(argv, options)
   debug.verbose('Policy checking STARTED')
 
-  const settings = load(settingsFile) as any
+  const settings = loadYaml(settingsFile)
   if (settings?.otomi?.addons?.conftest && !settings?.otomi?.addons?.conftest.enabled) {
     debug.log('Skipping')
     return
@@ -39,8 +38,8 @@ export const checkPolicies = async (argv: Arguments, options?: PrepareEnvironmen
   debug.debug(template)
 
   const extraArgs: string[] = []
-  if (process.env.TRACE || argv.trace) extraArgs.push('--trace')
-  if (process.env.CI || argv.ci) extraArgs.push('--no-color')
+  if (LOG_LEVEL() === LOG_LEVELS.TRACE) extraArgs.push('--trace')
+  if (ENV.isCI) extraArgs.push('--no-color')
 
   debug.verbose('Checking manifest against policies')
   const confTestOutput = (

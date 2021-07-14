@@ -1,9 +1,10 @@
 import { Argv } from 'yargs'
 import { OtomiDebugger, terminal } from '../common/debug'
 import { Arguments, helmOptions } from '../common/helm-opts'
-import { hfTrimmed } from '../common/hf'
+import { hfStream } from '../common/hf'
 import { ENV, LOG_LEVEL_STRING } from '../common/no-deps'
 import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setup'
+import { ProcessOutputTrimmed } from '../common/zx-enhance'
 import { decrypt } from './decrypt'
 
 const fileName = 'diff'
@@ -22,18 +23,20 @@ const setup = async (argv: Arguments, options?: PrepareEnvironmentOptions): Prom
   if (options) await otomi.prepareEnvironment(debug, options)
 }
 
-export const diff = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<string> => {
+export const diff = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<ProcessOutputTrimmed> => {
   await setup(argv, options)
   await decrypt(argv)
   debug.verbose('Start Diff')
-  const output = await hfTrimmed({
-    fileOpts: argv.file,
-    labelOpts: argv.label,
-    logLevel: LOG_LEVEL_STRING(),
-    args: ['diff', '--skip-deps'],
-  })
-  debug.verbose(output)
-  return output
+  const res = await hfStream(
+    {
+      fileOpts: argv.file,
+      labelOpts: argv.label,
+      logLevel: LOG_LEVEL_STRING(),
+      args: ['diff', '--skip-deps'],
+    },
+    { trim: true, streams: { stdout: debug.stream.log } },
+  )
+  return new ProcessOutputTrimmed(res)
 }
 
 export const module = {

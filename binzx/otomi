@@ -17,22 +17,32 @@ if [ -n "$TESTING" ]; then
   CI=1
   ENV_DIR="$PWD/tests/fixtures"
 elif [ -z "$ENV_DIR" ]; then
-  if [ ! "$(ls -A $PWD)" ]; then
-    export ENV_DIR=$PWD
-  elif [ -f "$PWD/env/cluster.yaml" ] && [ -f "$PWD/env/settings.yaml" ] && [ -d "$PWD/env/charts" ]; then
-    export ENV_DIR=$PWD
-  else
-    echo -e "ENV_DIR is not set, otomi needs ENV_DIR to function. \nENV_DIR can be a (yet) non-existing path, but needs to be an absolute path." && exit 1
-  fi
+  ENV_DIR=$PWD
 else
   mkdir -p $ENV_DIR
 fi
+
+# TODO: Make conditional?
+silent() {
+  "$@" &>/dev/null
+}
+
 this_is_bash=$(ps -o ppid= $$)
 executing_shell=$(ps -o comm= $this_is_bash | sed "s/[^[:alnum:]\/]//g")
 path_to_exec_shell=$(which $executing_shell)
-# TODO: change image tag to latest
+
+# TODO: Remove this line
 OTOMI_TAG=${OTOMI_TAG:-otomi-zx}
+# # Parse yaml block without yq: https://stackoverflow.com/a/49190338/14982291
+otomi_core_version="master"
+[ -f "package.json" ] && otomi_core_version=$(awk -F \" '/"version": ".+"/ { print $4; exit; }' package.json)
+otomi_version=$([ -f $ENV_DIR/env/settings.yaml ] && awk '/otomi/{flag=1} flag && /version:/{print $NF;flag=""}' $ENV_DIR/env/settings.yaml)
+otomi_version=${otomi_version:-$otomi_core_version}
+readonly otomi_version
+OTOMI_TAG=${OTOMI_TAG:-$otomi_version}
+
 readonly otomi_tools_image="otomi/core:${OTOMI_TAG}"
+echo $otomi_tools_image
 # shellcheck disable=SC2155
 readonly base_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 readonly calling_args="$*"
@@ -43,6 +53,29 @@ fi
 readonly script_full_path
 
 update_base="https://raw.githubusercontent.com/redkubes/otomi-core/${OTOMI_TAG}/binzx/otomi"
+
+date_to_format() {
+  date=$1
+  format=${2:-+%s}
+  which_date=$(which date)
+  if [[ "$OSTYPE" == "darwin"* ]] && [[ "$which_date" == "/bin/date" ]]; then
+    date -j -f "%Y-%m-%dT%H:%M:%SZ" $date $format
+    return $?
+  fi
+  date --date="$date" $format
+  return $?
+}
+
+universal_stat() {
+  file=$1
+  which_stat=$(which stat)
+  if [[ "$OSTYPE" == "darwin"* ]] && [[ "$which_stat" == "/usr/bin/stat" ]]; then
+    stat -f %A $file
+    return $?
+  fi
+  stat -c '%a' $file
+  return $?
+}
 
 run_self_update() {
   echo "Performing self-update..."
@@ -57,7 +90,7 @@ run_self_update() {
   echo "Done."
 
   # Copy over modes from old version
-  OCTAL_MODE=$(stat -c '%a' $script_full_path)
+  OCTAL_MODE=$(universal_stat $script_full_path)
   if ! chmod $OCTAL_MODE "$0.tmp"; then
     echo "Failed: Error while trying to set mode on $0.tmp."
     exit 1
@@ -88,11 +121,10 @@ check_update() {
     return 0
   fi
 
-  last_commit_date=$(curl -s "https://api.github.com/repos/redkubes/otomi-core/commits?sha=${OTOMI_TAG}&path=binzx%2Fotomi&page=1&per_page=1" | grep -A5 '"committer":' | grep '"date":' | awk -F': ' '{print $2}')
-  last_file_change=$(date -u -r $script_full_path "+%Y-%m-%dT%H:%M:%SZ")
-  last_commit_date=$(echo $last_commit_date | tr -d '"')
-  last_commit_date_sec=$(date --date="$last_commit_date" +%s)
-  last_file_change_sec=$(date --date="$last_file_change" +%s)
+  last_commit_date=$(curl -s "https://api.github.com/repos/redkubes/otomi-core/commits?sha=${OTOMI_TAG}&path=binzx%2Fotomi&page=1&per_page=1" | grep -A5 '"committer":' | grep '"date":' | awk -F': ' '{print $2}' | tr -d '"')
+  last_file_change=$(date -u -r $script_full_path '+%Y-%m-%dT%H:%M:%SZ')
+  last_commit_date_sec=$(date_to_format $last_commit_date)
+  last_file_change_sec=$(date_to_format $last_file_change)
 
   if [ "$last_commit_date_sec" -ne "0" ] && [ "$last_commit_date_sec" -gt "$last_file_change_sec" ]; then
     read -r -p "Newer version is available, do you want to update (yes/No)? " answer
@@ -106,12 +138,23 @@ check_update() {
     esac
   fi
 }
+silent echo "Checking for updates"
 [ -z $CI ] && check_update
 
+silent echo "Preparing docker environment variables"
 tmp_env=$(mktemp)
-env | grep -v -e ^PATH= -e ^HOME= -e ^USER= -e ^TMPDIR= >$tmp_env
 
 cat >>$tmp_env <<EOF
+ENV_DIR=${ENV_DIR}
+AZURE_TENANT_ID=${AZURE_TENANT_ID}
+AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+AWS_REGION=${AWS_REGION}
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+VAULT_TOKEN=${VAULT_TOKEN}
+GCLOUD_SERVICE_KEY=${GCLOUD_SERVICE_KEY}
+K8S_CONTEXT=${K8S_CONTEXT}
 SHELL=${path_to_exec_shell}
 OTOMI_TAG=${OTOMI_TAG}
 OTOMI_CALLER_COMMAND=${BASH_SOURCE[0]##*/}
@@ -124,54 +167,76 @@ uname -a | grep -i darwin >/dev/null && helm_config="$HOME/Library/Preferences/h
 
 stack_dir='/home/app/stack'
 executable="node --experimental-specifier-resolution=node ${stack_dir}/dist/otomi.js --"
+
 stack_volume=""
+tmp_volume_dir=$(mktemp -d)
+tmp_volume=" -v $tmp_volume_dir:/tmp"
 if [[ $base_dir == *"otomi-core"* ]] || [[ $(pwd) == *"otomi-core"* ]]; then
+  silent echo "Checking if in dev environment"
   if [[ $base_dir == *"otomi-core"* ]]; then
     stack_dir=$(cd "$base_dir/.." && pwd)
   elif [[ $(pwd) == *"otomi-core"* ]]; then
     stack_dir=$(pwd | awk -F'otomi-core' '{print $1"otomi-core"}')
   fi
 
-  stack_volume="-v ${stack_dir}:${stack_dir} -v /tmp:/tmp"
+  stack_volume="-v $stack_dir:$stack_dir"
+  tmp_volume="-v /tmp:/tmp"
 
-  if [ -f "${stack_dir}/dist/otomi.js" ]; then # Use development distribution if exists
+  # Use development distribution if exists
+  if [ -f "${stack_dir}/dist/otomi.js" ]; then
     executable="node --experimental-specifier-resolution=node ${stack_dir}/dist/otomi.js --"
+  else
+    executable="node --no-warnings --experimental-specifier-resolution=node --loader ts-node/esm ${stack_dir}/src/otomi.ts --"
   fi
   echo "OTOMI_DEV=true" >>$tmp_env
 fi
 
+check_volume_path() {
+  source=$1
+  dest=$2
+  [ -z $source ] && [ -z $dest ] && echo "" && return 0
+  echo "-v $source:$dest"
+  return 0
+}
+
 cmd="${executable} $*"
-if [ "$1" = "bash" ] && [ "$#" = "1" ]; then # If command is "otomi bash"
+# If command is "otomi bash"
+if [ "$1" = "bash" ] && [ "$#" = "1" ]; then
   cmd="bash"
 fi
 
-docker image inspect $otomi_tools_image >/dev/null 2>&1 || {
-  pull_output=$(docker pull $otomi_tools_image 2>&1 >/dev/null)
-  status=$?
-  if [ "$status" -ne 0 ]; then
-    echo "$pull_output"
-    echo "Could not find an image for the supplied OTOMI_TAG: '${OTOMI_TAG}'"
-    exit $status
-  fi
-} >/dev/null 2>&1
-
-# If $KUBECONFIG is mounted then we should unset it so that it is not used in the container.
-docker run --network host --rm -it --user root:root \
+silent echo "Pulling latest version of the docker image"
+# TODO: Remove otomi-zx check
+[ "$OTOMI_TAG" = 'latest' ] || [ "$OTOMI_TAG" = 'master' ] || [ "$OTOMI_TAG" = 'otomi-zx' ] && [ -z $NOPULL ] && silent docker pull $otomi_tools_image
+mkdir -p /tmp/otomi
+docker run --network host --rm -it \
   $stack_volume \
-  -v ${KUBECONFIG:-$HOME/.kube/config}:/home/app/.kube/config \
-  -v $HOME/.ssh:/home/app/.ssh \
-  -v $helm_config:/home/app/.config/helm \
-  -v $HOME/.config/gcloud:/home/app/.config/gcloud \
-  -v $HOME/.aws:/home/app/.aws \
-  -v $HOME/.azure:/home/app/.azure \
-  -v ${GOOGLE_APPLICATION_CREDENTIALS}:${GOOGLE_APPLICATION_CREDENTIALS} \
-  -v $ENV_DIR:$stack_dir/env \
-  -v $ENV_DIR:$ENV_DIR \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  --env-file $tmp_env \
-  -w $stack_dir \
-  $otomi_tools_image \
+  $tmp_volume \
+  -v /tmp/otomi:/tmp/otomi \
+  $(check_volume_path ${KUBECONFIG:-$HOME/.kube/config} "/home/app/.kube/config") \
+  $(check_volume_path $HOME/.ssh "/home/app/.ssh") \
+  $(check_volume_path $helm_config "/home/app/.config/helm") \
+  $(check_volume_path $HOME/.config/gcloud "/home/app/.config/gcloud") \
+  $(check_volume_path $HOME/.aws "/home/app/.aws") \
+  $(check_volume_path $HOME/.azure "/home/app/.azure") \
+  $(check_volume_path $ENV_DIR "$stack_dir/env") \
+  $(check_volume_path $ENV_DIR "$ENV_DIR") \
+  $(check_volume_path /var/run/docker.sock "/var/run/docker.sock") \
+  --env-file "$tmp_env" \
+  -w "$stack_dir" \
+  "$otomi_tools_image" \
   bash -c "$cmd"
+
 status=$?
-rm -f "$tmp_env"
+
+if [[ $calling_args == *'-skip-cleanup'* ]] || [[ $calling_args == *'-s'* ]]; then
+  running_date=$(date -u '+%y%m%d-%H%M')
+  backup_path="/tmp/otomi/otomi-$running_date"
+  mkdir -p "$backup_path"
+  mv "$tmp_volume_dir/otomi" "$backup_path"
+  mv "$tmp_env" "$backup_path/running_env"
+else
+  rm -f "$tmp_env"
+  rm -rf "$tmp_volume_dir"
+fi
 exit $status

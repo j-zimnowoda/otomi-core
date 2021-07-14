@@ -19,4 +19,9 @@ fi
 
 echo "request: $mode" >&2
 
-if bin/crypt.sh $mode >&2; then printf "$ok"; else printf "$err"; fi
+if bin/crypt.sh $mode >&2; then
+  printf "$ok"
+else
+  echo "An unknown error occurred. Sending http 500 response." >&2
+  printf "$err"
+fi
