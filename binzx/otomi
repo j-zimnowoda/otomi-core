@@ -209,11 +209,12 @@ silent echo "Pulling latest version of the docker image"
 # TODO: Remove otomi-zx check
 [ "$OTOMI_TAG" = 'latest' ] || [ "$OTOMI_TAG" = 'master' ] || [ "$OTOMI_TAG" = 'otomi-zx' ] && [ -z $NOPULL ] && silent docker pull $otomi_tools_image
 mkdir -p /tmp/otomi
-docker run --network host --rm -it \
+docker run --network host --rm -it --user root:root \
   $stack_volume \
   $tmp_volume \
   -v /tmp/otomi:/tmp/otomi \
   $(check_volume_path ${KUBECONFIG:-$HOME/.kube/config} "/home/app/.kube/config") \
+  $(check_volume_path ${KUBECONFIG:-$HOME/.kube/otomi-system} "/home/app/.kube/otomi-system") \
   $(check_volume_path $HOME/.ssh "/home/app/.ssh") \
   $(check_volume_path $helm_config "/home/app/.config/helm") \
   $(check_volume_path $HOME/.config/gcloud "/home/app/.config/gcloud") \
