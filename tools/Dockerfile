@@ -165,7 +165,4 @@ RUN curl -sSL https://get.docker.com/ | sh && \
   chmod +x ./kind && \
   mv ./kind /usr/local/bin/kind
 
-RUN chown -R app:app /home/app
-USER app
-
 CMD "/bin/bash"
