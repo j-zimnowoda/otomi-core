@@ -7,7 +7,6 @@ on:
     tags-ignore:
       - '*'
 env:
-  COMMIT_MSG: ${{ github.event.head_commit.message }}
   CACHE_REGISTRY: ghcr.io
   CACHE_REPO: redkubes/otomi-core
   REPO: otomi/core
@@ -20,9 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: otomi/tools:kind
-      options: --user root:root
+      options: --user=root:root
       ports:
         - 6443:6443
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -30,6 +31,4 @@ jobs:
           token: ${{ env.GIT_PASSWORD }}
       - name: Create KinD
         run: |
-          set -e
           kind create cluster
-        # working-directory: /home/app

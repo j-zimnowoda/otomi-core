@@ -23,6 +23,7 @@ alias kcv="k config view"
 alias kce="$EDITOR ~/.kube/config"
 alias kcg="k config current-context"
 alias kcu="k config use-context"
+alias kind="act -W ./.github/workflows/integration.yml"
 alias kp="k proxy &"
 
 function kpo() {
