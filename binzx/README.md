@@ -12,7 +12,7 @@ docker build --target prod -t otomi/core:binzx .
 ```sh
 # Run the above mentioned commands
 # Don't forget the following:
-npm install --save-dev
+npm ci
 npm run compile:watch &
 
 ./binzx/otomi <commands here>
