@@ -12,6 +12,7 @@ const cleanSpec = {
   ENV_DIR: envalidPath({ default: process.cwd() }),
   GCLOUD_SERVICE_KEY: json({ default: undefined }),
   KUBE_VERSION_OVERRIDE: str({ default: undefined }),
+  KUBECONFIG: str({ default: `${process.env.HOME}/.kube/config` }),
   OTOMI_DEV: bool({ default: false }),
   IN_DOCKER: bool({ default: false }),
   OTOMI_IN_TERMINAL: bool({ default: true }),
