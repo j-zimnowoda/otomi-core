@@ -19,7 +19,7 @@ releases:
     namespace: shared
     <<: *default
   - name: kubeapps
-    installed: {{ $c | get "kubeapps.enabled" true }}
+    installed: {{ $c | get "kubeapps.enabled" "false" }}
     namespace: kubeapps
     <<: *default
   - name: gitea

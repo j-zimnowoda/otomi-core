@@ -1,51 +1,44 @@
-import { unlinkSync, writeFileSync } from 'fs'
+import { existsSync, unlinkSync } from 'fs'
 import { Argv } from 'yargs'
 import { $, nothrow } from 'zx'
-import { OtomiDebugger, terminal } from '../common/debug'
-import { Arguments, helmOptions } from '../common/helm-opts'
 import { hfTemplate } from '../common/hf'
-import { ENV } from '../common/no-deps'
-import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setup'
+import { cleanupHandler, prepareEnvironment } from '../common/setup'
+import { getFilename, getParsedArgs, OtomiDebugger, setParsedArgs, terminal } from '../common/utils'
+import { Arguments, helmOptions } from '../common/yargs-opts'
 
-const fileName = 'score-template'
+const cmdName = getFilename(import.meta.url)
 const templatePath = '/tmp/template.yaml'
-let debug: OtomiDebugger
+const debug: OtomiDebugger = terminal(cmdName)
 
-/*
-Note: Colors do not work: https://github.com/google/zx/issues/124
-*/
 const cleanup = (argv: Arguments): void => {
-  if (argv['skip-cleanup']) return
-  unlinkSync(templatePath)
+  if (argv.skipCleanup) return
+  if (existsSync(templatePath)) unlinkSync(templatePath)
 }
 
-const setup = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
-  if (argv._[0] === fileName) cleanupHandler(() => cleanup(argv))
-  debug = terminal(fileName)
-
-  if (options) await otomi.prepareEnvironment(debug, options)
+const setup = (argv: Arguments): void => {
+  if (argv._[0] === cmdName) cleanupHandler(() => cleanup(argv))
 }
 
-export const scoreTemplate = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
-  await setup(argv, options)
-  debug.verbose('Scoring STARTED')
-  const result = await hfTemplate(argv)
-  debug.verbose('Scoring DONE')
-
-  writeFileSync(templatePath, result)
+export const scoreTemplate = async (): Promise<void> => {
+  const argv: Arguments = getParsedArgs()
+  debug.info('Scoring STARTED')
+  await hfTemplate(argv, templatePath)
+  debug.info('Scoring DONE')
 
   const scoreResult = await nothrow($`kube-score score ${templatePath}`)
   debug.log(scoreResult.stdout.trim())
 }
 
 export const module = {
-  command: fileName,
-  describe: '',
+  command: cmdName,
+  describe: undefined,
   builder: (parser: Argv): Argv => helmOptions(parser),
 
   handler: async (argv: Arguments): Promise<void> => {
-    ENV.PARSED_ARGS = argv
-    await scoreTemplate(argv, { skipKubeContextCheck: true })
+    setParsedArgs(argv)
+    await prepareEnvironment({ skipKubeContextCheck: true })
+    setup(argv)
+    await scoreTemplate()
   },
 }
 

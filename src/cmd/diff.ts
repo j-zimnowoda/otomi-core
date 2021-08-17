@@ -1,52 +1,39 @@
 import { Argv } from 'yargs'
-import { OtomiDebugger, terminal } from '../common/debug'
-import { Arguments, helmOptions } from '../common/helm-opts'
+import { Arguments, decrypt } from '../common/crypt'
 import { hfStream } from '../common/hf'
-import { ENV, LOG_LEVEL_STRING } from '../common/no-deps'
-import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setup'
+import { prepareEnvironment } from '../common/setup'
+import { getFilename, getParsedArgs, logLevelString, OtomiDebugger, setParsedArgs, terminal } from '../common/utils'
+import { helmOptions } from '../common/yargs-opts'
 import { ProcessOutputTrimmed } from '../common/zx-enhance'
-import { decrypt } from './decrypt'
 
-const fileName = 'diff'
-let debug: OtomiDebugger
+const cmdName = getFilename(import.meta.url)
+const debug: OtomiDebugger = terminal(cmdName)
 
-/* eslint-disable no-useless-return */
-const cleanup = (argv: Arguments): void => {
-  if (argv['skip-cleanup']) return
-}
-/* eslint-enable no-useless-return */
-
-const setup = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
-  if (argv._[0] === fileName) cleanupHandler(() => cleanup(argv))
-  debug = terminal(fileName)
-
-  if (options) await otomi.prepareEnvironment(debug, options)
-}
-
-export const diff = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<ProcessOutputTrimmed> => {
-  await setup(argv, options)
-  await decrypt(argv)
-  debug.verbose('Start Diff')
+export const diff = async (): Promise<ProcessOutputTrimmed> => {
+  const argv: Arguments = getParsedArgs()
+  await decrypt(...(argv.files ?? []))
+  debug.info('Start Diff')
   const res = await hfStream(
     {
-      fileOpts: argv.file,
-      labelOpts: argv.label,
-      logLevel: LOG_LEVEL_STRING(),
+      fileOpts: argv.file as string[],
+      labelOpts: argv.label as string[],
+      logLevel: logLevelString(),
       args: ['diff', '--skip-deps'],
     },
-    { trim: true, streams: { stdout: debug.stream.log } },
+    { trim: true, streams: { stdout: debug.stream.log, stderr: debug.stream.error } },
   )
   return new ProcessOutputTrimmed(res)
 }
 
 export const module = {
-  command: fileName,
-  describe: 'Diff k8s resources',
+  command: cmdName,
+  describe: 'Diff all, or supplied, k8s resources',
   builder: (parser: Argv): Argv => helmOptions(parser),
 
   handler: async (argv: Arguments): Promise<void> => {
-    ENV.PARSED_ARGS = argv
-    await diff(argv, { skipDecrypt: true })
+    setParsedArgs(argv)
+    await prepareEnvironment({ skipDecrypt: true })
+    await diff()
   },
 }
 

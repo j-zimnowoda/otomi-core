@@ -225,17 +225,17 @@ definitions:
       entrypoint:
         description: A Kubernetes API public IP address (onprem only).
         type: string
+      k8sContext:
+        $ref: '#/definitions/k8sContext'
       k8sVersion:
         $ref: '#/definitions/k8sVersion'
       name:
         type: string
+      owner:
+        $ref: '#/definitions/idName'
+        description: The name of the organization owning the cluster.
       provider:
-        type: string
-        enum:
-          - aws
-          - azure
-          - google
-          - oneprem
+        $ref: '#/definitions/provider'
       region:
         description: Dependent on provider.
         examples:
@@ -247,7 +247,10 @@ definitions:
         description: AWS only. If provided will override autodiscovery from metadata.
         type: string
     required:
+      - k8sContext
+      - k8sVersion
       - name
+      - owner
       - provider
   containerSpec:
     additionalProperties: false
@@ -427,6 +430,9 @@ definitions:
       - script
       - type
     type: object
+  k8sContext:
+    description: The cluster k8s context as found in $KUBECONFIG.
+    type: string
   k8sVersion:
     description: The cluster k8s version. Otomi supports 2 minor versions backwards compatibility from the suggested default.
     enum:
@@ -488,6 +494,13 @@ definitions:
     maximum: 32768
     minimum: 80
     type: number
+  provider:
+    type: string
+    enum:
+      - aws
+      - azure
+      - google
+      - onprem
   redisChart:
     properties:
       _rawValues:
@@ -904,31 +917,9 @@ definitions:
             name:
               type: string
     type: array
-  vaultCreds:
-    properties:
-      provider:
-        type: string
-        const: vault
-      vault:
-        properties:
-          keys:
-            description: Comma separated list of one or two paths to keys as defined in Vault. One if used for both enc+dec. Two if one for enc, other for dec.
-            title: Vault keys
-            type: string
-          token:
-            type: string
-            x-secret: true
-        required:
-          - token
-    required:
-      - vault
 properties:
   alerts:
     $ref: '#/definitions/alerts'
-  apps:
-    description: The list of otomi apps that are shown in the console.
-    type: object
-    properties: {}
   azure:
     description: Azure specific configuration.
     properties:
@@ -1867,11 +1858,6 @@ properties:
             default: false
   cluster:
     $ref: '#/definitions/cluster'
-  customer:
-    additionalProperties: false
-    properties:
-      name:
-        type: string
   dns:
     additionalProperties: false
     properties:
@@ -1954,24 +1940,6 @@ properties:
       - provider
   home:
     $ref: '#/definitions/alerts'
-  k8s:
-    additionalProperties: false
-    properties:
-      namespaces:
-        items:
-          additionalProperties: false
-          properties:
-            disableIstioInjection:
-              type: boolean
-            disablePolicyChecks:
-              type: boolean
-            name:
-              type: string
-          required:
-            - name
-        type: array
-    required:
-      - namespaces
   kms:
     additionalProperties: false
     properties:
@@ -1989,6 +1957,9 @@ properties:
                     type: string
                   region:
                     $ref: '#/definitions/aws/definitions/region'
+                required:
+                  - keys
+                  - region
             required:
               - aws
           - properties:
@@ -2003,6 +1974,9 @@ properties:
                     type: string
                   tenantId:
                     $ref: '#/definitions/azure/definitions/tenantId'
+                required:
+                  - keys
+                  - tenantId
             required:
               - azure
           - properties:
@@ -2019,10 +1993,30 @@ properties:
                     $ref: '#/definitions/google/definitions/accountJson'
                   project:
                     $ref: '#/definitions/google/definitions/projectId'
+                required:
+                  - keys
+                  - accountJson
+                  - project
             required:
               - google
-
-          - $ref: '#/definitions/vaultCreds'
+          - properties:
+              provider:
+                type: string
+                const: vault
+              vault:
+                properties:
+                  keys:
+                    description: Comma separated list of one or two paths to keys as defined in Vault. One if used for both enc+dec. Two if one for enc, other for dec.
+                    title: Vault keys
+                    type: string
+                  token:
+                    type: string
+                    x-secret: true
+                required:
+                  - keys
+                  - token
+            required:
+              - vault
   letsencryptCA:
     type: string
   letsencryptRootCA:
@@ -2070,7 +2064,19 @@ properties:
       additionalClusters:
         type: array
         items:
-          $ref: '#/definitions/cluster'
+          title: Additional cluster
+          description: A k8s cluster managed by Otomi.
+          properties:
+            domainSuffix:
+              $ref: '#/definitions/domain'
+            name:
+              $ref: '#/definitions/idName'
+            provider:
+              $ref: '#/definitions/provider'
+          required:
+            - domainSuffix
+            - name
+            - provider
       adminPassword:
         type: string
         default: bladibla
@@ -2119,11 +2125,6 @@ properties:
           - ce
           - ee
         type: string
-      pullSecret:
-        default: ''
-        description: The pullsecret to deploy the Otomi API and Console. Requires an Otomi license.
-        type: string
-        x-secret: true
       version:
         default: latest
         description: 'Best pin this to a valid release version found in the repo.'
@@ -2357,10 +2358,6 @@ properties:
                   type: string
                 user:
                   type: string
-  services:
-    items:
-      $ref: '#/definitions/service'
-    type: array
   smtp:
     additionalProperties: false
     properties:
@@ -2384,24 +2381,16 @@ properties:
         description: 'The smtp host:port combination.'
     required:
       - smarthost
-  sops:
-    description: DON'T EDIT THIS YOURSELF! This is a SOPS governed property. Exists here only to avoid warnings in console.
   teamConfig:
     additionalProperties: false
     properties:
-      services:
-        description: An internal otomi object (do not edit it).
-        type: array
       teams:
         additionalProperties: false
         patternProperties:
           ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$:
             $ref: '#/definitions/team'
 required:
-  - alerts
   - cluster
-  - customer
   - oidc
   - otomi
   - teamConfig
-  - services

@@ -42,23 +42,13 @@ for f in '.gitignore' '.prettierrc.yml' 'README.md'; do
   cp $PWD/.values/$f $ENV_DIR/
 done
 if [ ! -d $ENV_DIR/env ]; then
-  if [ -z "$PROFILE" ]; then
-    # we want the empty skeleton files
-    cp -r $PWD/.values/env $ENV_DIR/
-  else
-    # we asked for a profile
-    readonly common_profile_path=$PWD/profiles/common/env
-    readonly profile_path=$PWD/profiles/$PROFILE/env
-
-    echo "No files found in "$ENV_DIR/env". Installing example files from profile $PROFILE"
-    cp -r $common_profile_path $ENV_DIR
-    cp -r $profile_path $ENV_DIR
-  fi
+  # we want the empty skeleton files
+  cp -r $PWD/.values/env $ENV_DIR/
 fi
 git init $ENV_DIR
 cp -f $PWD/bin/hooks/pre-commit $ENV_DIR/.git/hooks/
 readonly secrets_file="$ENV_DIR/env/secrets.settings.yaml"
-if [ -f "$secrets_file" ] && [ "$(cat $secrets_file | yq r - otomi.pullSecret)" != '' ]; then
+if [ -f "$secrets_file" ]; then
   echo "Copying Otomi Console setup"
   cp -rf $PWD/docker-compose $ENV_DIR/
   cp -f $PWD/core.yaml $ENV_DIR/

@@ -1,34 +1,8 @@
-import * as dotenv from 'dotenv'
-import { existsSync } from 'fs'
-import { $, chalk, ProcessOutput, ProcessPromise, question } from 'zx'
-import { DebugStream } from './debug'
-import { ENV } from './no-deps'
+import { chalk, ProcessOutput, ProcessPromise, question } from 'zx'
+import { env } from './envalid'
+import { DebugStream, getParsedArgs } from './utils'
 
 const MAX_RETRIES_QUESTION = 3
-
-/**
- * Do a bi-directional source.
- * Sourcing using `bash` within zx, only applies to those commands, but are not available using `process.env.ENV_VAR_HERE`
- * This function also maps that to process.env, making it bi-directional
- * @param path
- * @param force force sourcing of a file - even if it has previously been sourced
- */
-export const source = async (path: string, force = false): Promise<void> => {
-  if (!force && path in process.env) {
-    return
-  }
-  if (!existsSync(path)) {
-    throw new Error(`'${path}' does not exists`)
-  }
-
-  const envVars = (await $`source ${path} && env`).stdout
-  const envVarAsObj = dotenv.parse(envVars)
-  Object.entries(envVarAsObj).map(([key, value]) => {
-    process.env[key] = value
-    return value
-  })
-  process.env[path] = 'true'
-}
 
 export type AskType = {
   choices?: string[]
@@ -53,13 +27,13 @@ export const ask = async (query: string, options?: AskType): Promise<string> => 
   const defaultAnswer = options?.defaultAnswer ?? ''
   const maxRetries = options?.maxRetries ?? MAX_RETRIES_QUESTION
 
-  if (!ENV.PARSED_ARGS || ENV.PARSED_ARGS['no-interactive']) return defaultAnswer
+  if (!getParsedArgs() || getParsedArgs().nonInteractive) return defaultAnswer
 
   const defaultMatchingFn = (answer: string) =>
     [...new Set(matching.map((val) => val.toLowerCase()))].includes(answer.toLowerCase())
   const matchingFn = options?.matchingFn ?? defaultMatchingFn
 
-  if (ENV.isCI) return defaultAnswer
+  if (env.CI) return defaultAnswer
   let answer = ''
   let tries = 0
   let matches = false
@@ -94,8 +68,8 @@ export type Streams = {
   stderr?: DebugStream
 }
 export const stream = (cmd: ProcessPromise<ProcessOutput>, streams?: Streams): ProcessPromise<ProcessOutput> => {
-  if (streams?.stdout) cmd.stdout.pipe(streams.stdout)
-  if (streams?.stderr) cmd.stderr.pipe(streams.stderr)
+  if (streams?.stdout) cmd.stdout.pipe(streams.stdout, { end: false })
+  if (streams?.stderr) cmd.stderr.pipe(streams.stderr, { end: false })
   return cmd
 }
 

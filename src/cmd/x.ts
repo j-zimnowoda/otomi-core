@@ -1,40 +1,37 @@
-import { Argv } from 'yargs'
+import { Arguments, Argv } from 'yargs'
 import { $, nothrow } from 'zx'
-import { OtomiDebugger, terminal } from '../common/debug'
-import { BasicArguments } from '../common/no-deps'
-import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setup'
+import {
+  BasicArguments,
+  getFilename,
+  getParsedArgs,
+  logLevel,
+  logLevels,
+  OtomiDebugger,
+  setParsedArgs,
+  terminal,
+} from '../common/utils'
 import { stream } from '../common/zx-enhance'
 
-const fileName = 'x'
-let debug: OtomiDebugger
+const cmdName = getFilename(import.meta.url)
+const debug: OtomiDebugger = terminal(cmdName)
 
-/* eslint-disable no-useless-return */
-const cleanup = (argv: BasicArguments): void => {
-  if (argv['skip-cleanup']) return
-}
-/* eslint-enable no-useless-return */
-
-const setup = async (argv: BasicArguments, options?: PrepareEnvironmentOptions): Promise<void> => {
-  if (argv._[0] === fileName) cleanupHandler(() => cleanup(argv))
-  debug = terminal(fileName)
-
-  if (options) await otomi.prepareEnvironment(debug, options)
-}
-
-export const x = async (argv: BasicArguments, options?: PrepareEnvironmentOptions): Promise<void> => {
-  await setup(argv, options)
-  const commands = argv._.slice(1).join(' ')
+export const x = async (inArgv?: Arguments): Promise<number> => {
+  const argv: Arguments = inArgv ?? getParsedArgs()
+  const commands = argv._.slice(1)
+  if (logLevel() >= logLevels.INFO) commands.push('-v')
   const output = await stream(nothrow($`${commands}`), { stdout: debug.stream.log, stderr: debug.stream.error })
-  process.exit(output.exitCode)
+  return output.exitCode
 }
 
 export const module = {
-  command: fileName,
+  command: cmdName,
   describe: 'Execute command in container',
   builder: (parser: Argv): Argv => parser,
 
   handler: async (argv: BasicArguments): Promise<void> => {
-    await x(argv, { skipKubeContextCheck: true })
+    setParsedArgs(argv)
+    const exitCode = await x()
+    process.exit(exitCode)
   },
 }
 

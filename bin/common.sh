@@ -19,6 +19,7 @@ LOG_LEVEL='--log-level warn'
 # Common vars
 readonly otomi_settings="$ENV_DIR/env/settings.yaml"
 readonly otomi_tools_image="otomi/core:latest"
+[ $(uname -s) == 'Linux' ] && readonly LINUX_WORKAROUND='--user=root:root'
 
 # Mutliple files vars
 readonly helmfile_output_hide="(^\W+$|skipping|basePath=)"
@@ -107,6 +108,7 @@ function _rind() {
   shift
   if [ $has_docker = 'true' ] && [ -z "$IN_DOCKER" ]; then
     docker run --rm \
+      $LINUX_WORKAROUND \
       -v $ENV_DIR:$ENV_DIR \
       -e IN_DOCKER='1' \
       -e ENV_DIR=$ENV_DIR \

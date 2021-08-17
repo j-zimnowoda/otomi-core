@@ -26,14 +26,9 @@ resources:
     metadata:
       name: default
       namespace: {{ $ns.name }}
-    {{- if or ($v.otomi | get "globalPullSecret" nil) (has $ns (list "drone-pipelines" "otomi" "maintenance")) }}
+    {{- if or ($v.otomi | get "globalPullSecret" nil) }}
     imagePullSecrets:
-      {{- if $v.otomi | get "globalPullSecret" nil }}
       - name: otomi-pullsecret-global
-      {{- end }}
-      {{- if has $ns (list "drone-pipelines" "otomi" "maintenance") }}
-      - name: gcr-json-key
-      {{- end }}
     {{- end }}
   {{- end }}
   {{- range $id, $team := $t.teams }}
@@ -45,6 +40,16 @@ resources:
       labels:
         name: {{ $ns }}
         istio-injection: enabled
+  {{- with $v.otomi | get "globalPullSecret" nil }}
+  - apiVersion: v1
+    kind: Secret
+    type: kubernetes.io/dockerconfigjson
+    metadata:
+      name: otomi-pullsecret-global
+      namespace: {{ $ns }}
+    data:
+      .dockerconfigjson: {{ tpl $dockerConfigTpl . | b64enc }}
+  {{- end }}
   # patching service account here as helm does not recognize it as it's own
   - apiVersion: v1
     kind: ServiceAccount
@@ -92,18 +97,6 @@ resources:
     - kind: ServiceAccount
       name: default
       namespace: team-admin
-  {{- if $v | get "otomi.pullSecret" nil }}
-  {{- range $ns := list "drone-pipelines" "otomi" "maintenance" }}
-  - apiVersion: v1
-    kind: Secret
-    metadata:
-      name: gcr-json-key
-      namespace: {{ $ns }}
-    type: kubernetes.io/dockerconfigjson
-    data:
-      .dockerconfigjson: {{ $v.otomi.pullSecret }}
-  {{- end }}
-  {{- end }}
   - apiVersion: scheduling.k8s.io/v1
     kind: PriorityClass
     metadata:
