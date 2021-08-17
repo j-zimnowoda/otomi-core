@@ -1,7 +1,7 @@
 ARG TOOLS_TAG=kind
 
 #-----------------------------
-FROM node:14-slim as npm
+FROM node:16-slim as npm
 
 ENV APP_HOME=/home/app/stack
 RUN mkdir -p $APP_HOME
@@ -28,12 +28,14 @@ ENV CI=true
 
 COPY --chown=app . .
 
-RUN if [ "$SKIP_TESTS" = 'false' ]; then bin/ci-tests.sh; fi
+RUN if [ "$SKIP_TESTS" = 'false' ]; then npm ci; src/ci-tests.ts; fi
 
 #-----------------------------
 FROM otomi/tools:$TOOLS_TAG as prod
 
 ENV APP_HOME=/home/app/stack
+ENV IN_DOCKER=1
+
 RUN mkdir -p $APP_HOME
 WORKDIR $APP_HOME
 

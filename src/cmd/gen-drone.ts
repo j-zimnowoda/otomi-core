@@ -1,82 +1,85 @@
-import { readFileSync, writeFileSync } from 'fs'
+import { writeFileSync } from 'fs'
 import { Argv } from 'yargs'
-import { OtomiDebugger, terminal } from '../common/debug'
+import { env } from '../common/envalid'
 import { hfValues } from '../common/hf'
-import { BasicArguments, ENV } from '../common/no-deps'
-import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setup'
+import { getClusterOwner, getImageTag, prepareEnvironment } from '../common/setup'
+import {
+  BasicArguments,
+  getFilename,
+  getParsedArgs,
+  gucci,
+  OtomiDebugger,
+  setParsedArgs,
+  startingDir,
+  terminal,
+} from '../common/utils'
 
 export interface Arguments extends BasicArguments {
-  dryRun: boolean
-  d: boolean
-  'dry-run': boolean
+  dryRun?: boolean
 }
 
-const fileName = 'gen-drone'
-let debug: OtomiDebugger
+const cmdName = getFilename(import.meta.url)
+const debug: OtomiDebugger = terminal(cmdName)
 
-/* eslint-disable no-useless-return */
-const cleanup = (argv: Arguments): void => {
-  if (argv['skip-cleanup']) return
-}
-/* eslint-enable no-useless-return */
-
-const setup = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
-  if (argv._[0] === fileName) cleanupHandler(() => cleanup(argv))
-  debug = terminal(fileName)
-
-  if (options) await otomi.prepareEnvironment(debug, options)
-}
-
-export const genDrone = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
-  await setup(argv, options)
-  const hfVals = await hfValues()
-  if (!hfVals.charts?.drone?.enabled) {
+export const genDrone = async (): Promise<void> => {
+  const argv: Arguments = getParsedArgs()
+  const allValues = await hfValues()
+  if (!allValues.charts?.drone?.enabled) {
     return
   }
-  const receiver = hfVals.alerts?.drone ?? 'slack'
-  const branch = hfVals.charts?.['otomi-api']?.git?.branch ?? 'main'
+  const receiver = allValues.alerts?.drone ?? 'slack'
+  const branch = allValues.charts?.['otomi-api']?.git?.branch ?? 'main'
 
   const key = receiver === 'slack' ? 'url' : 'lowPrio'
-  const channel = receiver === 'slack' ? hfVals.alerts?.[receiver]?.channel ?? 'dev-mon' : undefined
+  const channel = receiver === 'slack' ? allValues.alerts?.[receiver]?.channel ?? 'dev-mon' : undefined
 
-  const webhook = hfVals.alerts?.[receiver]?.[key]
+  const webhook = allValues.alerts?.[receiver]?.[key]
   if (!webhook) throw new Error(`Could not find webhook url in 'alerts.${receiver}.${key}'`)
 
-  const cluster = hfVals.cluster?.name
+  const cluster = allValues.cluster?.name
+  const globalPullSecret = allValues.otomi?.globalPullSecret
+  const provider = allValues.alerts.drone
+  const imageTag = getImageTag()
+  const pullPolicy = imageTag.startsWith('v') ? 'if-not-exists' : 'always'
 
-  const template: string = readFileSync(`${process.env.PWD}/tpl/.drone.tpl.${receiver}.yml`, 'utf-8')
-  const output = template
-    .replaceAll('__CLUSTER', cluster)
-    .replaceAll('__IMAGE_TAG', otomi.imageTag())
-    .replaceAll('__WEBHOOK', webhook)
-    .replaceAll('__CUSTOMER', otomi.customerName())
-    .replaceAll('__BRANCH', branch)
-    .replaceAll('__CHANNEL', channel)
+  const obj = {
+    imageTag,
+    branch,
+    cluster,
+    channel,
+    customer: getClusterOwner(),
+    globalPullSecret,
+    provider,
+    webhook,
+    pullPolicy,
+  }
 
-  if (process.env.DRY_RUN || argv.dryRun) {
+  const output = await gucci(`${startingDir}/tpl/.drone.yml.gotmpl`, obj)
+  if (argv.dryRun) {
     debug.log(output)
   } else {
-    writeFileSync(`${ENV.DIR}/.drone.yaml`, output)
+    writeFileSync(`${env.ENV_DIR}/.drone.yml`, output)
+    debug.log(`gen-drone is done and the configuration is written to: ${env.ENV_DIR}/.drone.yml`)
   }
 }
 
 export const module = {
-  command: fileName,
-  describe: '',
+  command: cmdName,
+  describe: undefined,
   builder: (parser: Argv): Argv =>
     parser.options({
       'dry-run': {
         alias: ['d'],
-        describe: "Dry Run, don't write to file, but to STDOUT",
-        group: 'otomi gen-drone options',
         boolean: true,
         default: false,
+        hidden: true,
       },
     }),
 
   handler: async (argv: Arguments): Promise<void> => {
-    ENV.PARSED_ARGS = argv
-    await genDrone(argv, { skipKubeContextCheck: true })
+    setParsedArgs(argv)
+    await prepareEnvironment({ skipKubeContextCheck: true })
+    await genDrone()
   },
 }
 

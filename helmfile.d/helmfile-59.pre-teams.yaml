@@ -1,0 +1,23 @@
+bases:
+  - snippets/defaults.gotmpl
+---
+{{ readFile "snippets/templates.gotmpl" }}
+{{- $v := .Environment.Values }}
+{{- $c := $v.charts }}
+
+releases:
+  - name: gatekeeper-constraints
+    installed: {{ $c | get "gatekeeper-operator.enabled" false }}
+    namespace: gatekeeper-system
+    chart: ../charts/gatekeeper-constraints
+    labels:
+      pkg: gatekeeper
+    values:
+      - ../values/gatekeeper/gatekeeper-constraints.gotmpl
+      - snippets/common.gotmpl
+  - name: job-gitea-prepare
+    installed: {{ $c | get "gitea.enabled" false }}
+    labels:
+      pkg: gitea
+      group: jobs
+    <<: *jobs

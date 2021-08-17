@@ -1,44 +1,45 @@
 import { Argv } from 'yargs'
-import { $ } from 'zx'
-import { OtomiDebugger, terminal } from '../common/debug'
-import { Arguments as HelmArgs, helmOptions } from '../common/helm-opts'
-import { ENV } from '../common/no-deps'
-import { cleanupHandler, otomi, PrepareEnvironmentOptions } from '../common/setup'
-import { Arguments as BootsrapArgs, bootstrap } from './bootstrap'
+import { $, cd } from 'zx'
+import { env } from '../common/envalid'
+import { hfValues } from '../common/hf'
+import { prepareEnvironment, scriptName } from '../common/setup'
+import { currDir, getFilename, OtomiDebugger, setParsedArgs, terminal } from '../common/utils'
+import { Arguments as HelmArgs } from '../common/yargs-opts'
+import { bootstrapValues } from './bootstrap'
 
-interface Arguments extends HelmArgs, BootsrapArgs {}
+type Arguments = HelmArgs
 
-const fileName = 'pull'
-let debug: OtomiDebugger
+const cmdName = getFilename(import.meta.url)
+const debug: OtomiDebugger = terminal(cmdName)
 
-/* eslint-disable no-useless-return */
-const cleanup = (argv: Arguments): void => {
-  if (argv['skip-cleanup']) return
-}
-/* eslint-enable no-useless-return */
+export const pull = async (): Promise<void> => {
+  const allValues = await hfValues()
+  const branch = allValues.charts?.['otomi-api']?.git?.branch ?? 'main'
+  debug.info('Pulling latest values')
+  const cwd = await currDir()
+  cd(env.ENV_DIR)
+  try {
+    await $`git fetch`
+    await $`git merge origin/${branch}`
+  } catch (error) {
+    debug.error(`Merge conflicts occured when trying to pull.\nPlease resolve these and run \`otomi commit\` again.`)
+    process.exit(env.CI ? 0 : 1)
+  } finally {
+    cd(cwd)
+  }
 
-const setup = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
-  if (argv._[0] === fileName) cleanupHandler(() => cleanup(argv))
-  debug = terminal(fileName)
-
-  if (options) await otomi.prepareEnvironment(debug, options)
-}
-
-export const pull = async (argv: Arguments, options?: PrepareEnvironmentOptions): Promise<void> => {
-  await setup(argv, options)
-  otomi.closeIfInCore(fileName, debug)
-  await $`git -C ${ENV.DIR} pull`
-  await bootstrap(argv)
+  await bootstrapValues()
 }
 
 export const module = {
-  command: fileName,
-  describe: `Wrapper for git pull && ${otomi.scriptName} bootstrap`,
-  builder: (parser: Argv): Argv => helmOptions(parser),
+  command: cmdName,
+  describe: `Wrapper for git pull && ${scriptName} bootstrap`,
+  builder: (parser: Argv): Argv => parser,
 
   handler: async (argv: Arguments): Promise<void> => {
-    ENV.PARSED_ARGS = argv
-    await pull(argv, { skipKubeContextCheck: true })
+    setParsedArgs(argv)
+    await prepareEnvironment({ skipKubeContextCheck: true })
+    await pull()
   },
 }
 

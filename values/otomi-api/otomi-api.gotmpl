@@ -13,6 +13,7 @@
 {{- $sopsEnabled := ne ($v | get "kms.sops.provider" "") "" }}
 
 replicaCount: 1
+clusterDomainSuffix: {{ $v.cluster.domainSuffix }}
 
 {{- with $o | get "resources.api" nil }}
 resources:
@@ -42,9 +43,6 @@ env:
   VERBOSE: '1'
   GIT_REPO_URL: {{ $o | get "git.repoUrl" $giteaValuesUrl }}
   GIT_BRANCH: {{ $o | get "git.branch" "main" }}
-  CLUSTER_ID: {{ printf "%s/%s" $c.provider $c.name }}
-  CLUSTER_NAME: {{ $c.apiName }}
-  CLUSTER_APISERVER: {{ $c.apiServer }}
   {{- if hasKey $o "disableSync" }}
   DISABLE_SYNC: true
   {{- end }}
@@ -87,4 +85,5 @@ podSecurityContext:
 {{- with .Values.otomi | get "globalPullSecret" nil }}
 imagePullSecrets:
   - name: otomi-pullsecret-global
+  - name: gcr-json-key 
 {{- end }}

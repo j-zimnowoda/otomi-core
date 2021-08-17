@@ -1,13 +1,18 @@
-import { load } from 'js-yaml'
+import { dump, load } from 'js-yaml'
 import { Transform } from 'stream'
 import { $, ProcessOutput, ProcessPromise } from 'zx'
-import { Arguments } from './helm-opts'
-import { asArray, ENV, LOG_LEVELS } from './no-deps'
+import { env } from './envalid'
+import { asArray, getParsedArgs, logLevels, terminal } from './utils'
+import { Arguments } from './yargs-opts'
 import { ProcessOutputTrimmed, Streams } from './zx-enhance'
 
-let value: any
+const value = {
+  clean: null,
+  rp: null,
+}
+
 const trimHFOutput = (output: string): string => output.replace(/(^\W+$|skipping|basePath=)/gm, '')
-const replaceHFPaths = (output: string): string => output.replaceAll('../env', ENV.DIR)
+const replaceHFPaths = (output: string): string => output.replaceAll('../env', env.ENV_DIR)
 
 export type HFParams = {
   fileOpts?: string | string[] | null
@@ -22,27 +27,27 @@ const hfCore = (args: HFParams): ProcessPromise<ProcessOutput> => {
   paramsCopy.logLevel ??= 'warn'
 
   // Only ERROR, WARN, INFO or DEBUG are allowed, map other to closest neighbor
-  switch (LOG_LEVELS[paramsCopy.logLevel.toUpperCase()]) {
-    case LOG_LEVELS.FATAL:
+  switch (logLevels[paramsCopy.logLevel.toUpperCase()]) {
+    case logLevels.FATAL:
       paramsCopy.logLevel = 'error'
       break
-    case LOG_LEVELS.VERBOSE:
+    case logLevels.DEBUG:
+    case logLevels.TRACE:
       paramsCopy.logLevel = 'info'
-      break
-    case LOG_LEVELS.TRACE:
-      paramsCopy.logLevel = 'debug'
       break
     default:
       break
   }
+  const parsedArgs = getParsedArgs()
+  if (parsedArgs?.debug) paramsCopy.logLevel = 'debug'
 
   paramsCopy.args = asArray(paramsCopy.args).filter(Boolean)
   if (!paramsCopy.args || paramsCopy.args.length === 0) {
     throw new Error('No arguments were passed')
   }
 
-  if ('KUBE_VERSION_OVERRIDE' in process.env) {
-    paramsCopy.args.push(`--set kubeVersionOverride=${process.env.KUBE_VERSION_OVERRIDE}`)
+  if (env.KUBE_VERSION_OVERRIDE && env.KUBE_VERSION_OVERRIDE.length > 0) {
+    paramsCopy.args.push(`--set kubeVersionOverride=${env.KUBE_VERSION_OVERRIDE}`)
   }
 
   const labels = paramsCopy.labelOpts?.map((item: string) => `-l=${item}`)
@@ -75,10 +80,11 @@ export type HFOptions = {
 
 export const hfStream = (args: HFParams, opts?: HFOptions): ProcessPromise<ProcessOutput> => {
   const proc = opts?.trim ? hfTrimmed(args) : hfCore(args)
-  if (opts?.streams?.stdout) proc.stdout.pipe(opts.streams.stdout)
-  if (opts?.streams?.stderr) proc.stderr.pipe(opts.streams.stderr)
+  if (opts?.streams?.stdout) proc.stdout.pipe(opts.streams.stdout, { end: false })
+  if (opts?.streams?.stderr) proc.stderr.pipe(opts.streams.stderr, { end: false })
   return proc
 }
+
 export const hf = async (args: HFParams, opts?: HFOptions): Promise<ProcessOutputTrimmed> => {
   return new ProcessOutputTrimmed(await hfStream(args, opts))
 }
@@ -87,36 +93,46 @@ export type ValuesOptions = {
   replacePath?: boolean
   asString?: boolean
 }
+
 export const values = async (opts?: ValuesOptions): Promise<any | string> => {
-  if (value) return value
+  if (opts?.replacePath && value.rp) {
+    if (opts?.asString) return dump(value.rp)
+    return value.rp
+  }
+  if (value.clean) {
+    if (opts?.asString) return dump(value.clean)
+    return value.clean
+  }
   const output = await hf({ fileOpts: './helmfile.tpl/helmfile-dump.yaml', args: 'build' }, { trim: true })
-  let result = output.stdout
-  if (opts?.replacePath) result = replaceHFPaths(result)
-  if (opts?.asString) return result
-  value = load(result) as any
-  return value
+  value.clean = load(output.stdout) as any
+  value.rp = load(replaceHFPaths(output.stdout)) as any
+  if (opts?.asString) return opts && opts.replacePath ? replaceHFPaths(output.stdout) : output.stdout
+  return opts && opts.replacePath ? value.rp : value.clean
 }
 
 export const hfValues = async (): Promise<any> => {
-  // TODO: replacePath not executed when values is already cached
-  /*
-    await values() //no replacePath
-    await values({ replacePath: true}) // still no replacePath
-  */
   return (await values({ replacePath: true })).renderedvalues
 }
 
 export const hfTemplate = async (argv: Arguments, outDir?: string, streams?: Streams): Promise<string> => {
+  const debug = terminal('hfTemplate')
   process.env.QUIET = '1'
   const args = ['template', '--skip-deps']
   if (outDir) args.push(`--output-dir=${outDir}`)
-  if (argv['skip-cleanup']) args.push('--skip-cleanup')
+  if (argv.skipCleanup) args.push('--skip-cleanup')
   let template = ''
-  const params: HFParams = { args }
+  const params: HFParams = { args, fileOpts: argv.file, labelOpts: argv.label, logLevel: argv.logLevel }
   if (!argv.f && !argv.l) {
-    template += await hf({ ...params, fileOpts: 'helmfile.tpl/helmfile-init.yaml' }, { streams })
+    const file = 'helmfile.tpl/helmfile-init.yaml'
+    debug.debug(`Templating ${file} started`)
+    const outInit = await hf({ ...params, fileOpts: file }, { streams })
+    debug.debug(`Templating ${file} done`)
+    template += outInit.stdout
     template += '\n'
   }
-  template += await hf(params, { streams })
+  debug.debug('Templating charts started')
+  const outAll = await hf(params, { streams })
+  debug.debug('Templating charts done')
+  template += outAll.stdout
   return template
 }
