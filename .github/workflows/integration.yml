@@ -13,6 +13,7 @@ env:
   GIT_USER: redkubesbot
   GIT_PASSWORD: ${{ secrets.GIT_PASSWORD }}
   DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_OTOMI_TOKEN }}
+  KIND_TAG: v1.19.0
 
 jobs:
   kind:
@@ -22,8 +23,6 @@ jobs:
       options: --user=root:root
       ports:
         - 6443:6443
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -31,4 +30,10 @@ jobs:
           token: ${{ env.GIT_PASSWORD }}
       - name: Create KinD
         run: |
-          kind create cluster
+          kind create cluster --wait 30s \
+            --name kind \
+            --image kindest/node:${{ env.KIND_TAG }} \
+            --config=./kind-config.yaml
+
+
+          kind delete cluster --name kind
