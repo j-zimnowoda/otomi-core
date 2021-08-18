@@ -1,4 +1,3 @@
-# we don't allow json files in the root except package.json
 .history
 .tmp
 *.bak
@@ -8,6 +7,7 @@ node_modules/
 /ssl
 /*.json
 !.cspell.json
+!tsconfig.json
 !package*.json
 *.DS_Store
 .values/values-schema.yaml

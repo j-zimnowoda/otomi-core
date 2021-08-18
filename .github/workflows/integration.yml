@@ -28,12 +28,19 @@ jobs:
         uses: actions/checkout@v2
         with:
           token: ${{ env.GIT_PASSWORD }}
+          path: otomi-core
       - name: Create KinD
         run: |
+          cd otomi-core
+          ls -lah
+          npm ci && npx tsc && chmod +x ./dist/otomi.js \
+            ENV_DIR=./tests/fixtures /usr/bin/node --experimental-specifier-resolution=node ./dist/otomi.js -- -h
+
+          exit 0
+
           kind create cluster --wait 30s \
             --name kind \
             --image kindest/node:${{ env.KIND_TAG }} \
             --config=./kind-config.yaml
-
 
           kind delete cluster --name kind
