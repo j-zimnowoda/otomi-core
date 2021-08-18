@@ -31,7 +31,7 @@ jobs:
           export PATH=$PATH:/home/app/tools
           export KUBECONFIG=/root/.kube/config
 
-          kind create cluster --wait 30s \
+          kind create cluster --wait 5m \
             --name kind \
             --image kindest/node:${{ env.KIND_TAG }} \
             --config=./kind-config.yaml
