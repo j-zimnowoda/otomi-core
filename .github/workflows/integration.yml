@@ -22,19 +22,36 @@ jobs:
       image: otomi/tools:kind
       options: --user=root:root
     steps:
-      - name: checkout
+      - name: Checkout
         uses: actions/checkout@v2
         with:
           token: ${{ env.GIT_PASSWORD }}
-      - name: k8s in Docker
+      # Important info: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#docker-container-filesystem
+      - name: K8s in Docker
         run: |
           export PATH=$PATH:/home/app/tools
-          export KUBECONFIG=/root/.kube/config
+          export KUBECONFIG=$HOME/.kube/config
+
+          whoami
+
+          mkdir -p $HOME/.kube
+          touch $KUBECONFIG
+          chown -R root:root $HOME
+          chmod 777 $KUBECONFIG
+          ls -lah $KUBECONFIG
 
           kind create cluster --wait 5m \
             --name kind \
+            --kubeconfig $KUBECONFIG \
             --image kindest/node:${{ env.KIND_TAG }} \
             --config=./kind-config.yaml
+
+          echo "DEBUG INFO INCOMING........"
+          # cat ${HOME}/.kube/config
+          docker ps -a
+          # docker inspect kind-control-plane -f "{{json .NetworkSettings.Networks }}"
+          kubectl cluster-info --context kind-kind --kubeconfig /github/home/.kube/config
+          echo "----------------------------"
 
           mkdir -p ./env/env
           cp -r ./tests/fixtures/env/ ./env/
