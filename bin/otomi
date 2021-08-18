@@ -20,7 +20,7 @@ env_unset='false'
 [ "$ENV_DIR" = "" ] && env_unset='true'
 
 . bin/common.sh
-[ "$has_docker" = 'false' ] && [ -z "$IN_DOCKER" ] && [ -z "$CI" ] && err "Otomi CLI expects a running docker daemon!" && exit 1
+[ $has_docker = 'false' ] && [ -z "$IN_DOCKER" ] && [ -z "$CI" ] && err "Otomi CLI expects a running docker daemon!" && exit 1
 
 stack_dir='/home/app/stack'
 readonly image_tag=$(otomi_image_tag)
@@ -90,15 +90,15 @@ function validate_k8s_context() {
   [ -n "$VERBOSE" ] && echo "Validating kube context"
   check_env_dir
   local env_path="$ENV_DIR/env/.env"
-  [ ! -f "$env_path" ] && err "The file '$env_path' does not exist" && exit 1
-  . "$env_path"
+  [ ! -f $env_path ] && err "The file '$env_path' does not exist" && exit 1
+  . $env_path
   [ -z "$K8S_CONTEXT" ] && err "K8S_CONTEXT is not defined in $env_path" && exit 1
   [ -n "$VERBOSE" ] && echo "Using kube context: $K8S_CONTEXT"
   local context=$(kubectl config current-context)
   if [ -z "$CI" ] && [ "$K8S_CONTEXT" != "$context" ]; then
     read -p "Warning: Your current kubernetes context does not match cluster context: $K8S_CONTEXT. Would you like to switch kube context to cluster first? [Yn]" ok
     if [ "${ok:-y}" = "y" ]; then
-      kubectl config use "$K8S_CONTEXT"
+      kubectl config use $K8S_CONTEXT
       $is_repo && drun bin/bootstrap.sh
     else
       exit
@@ -123,7 +123,7 @@ function evaluate_secrets() {
     if [ ! -r "$secrets_path" ]; then
       echo "Unable to find '$secrets_path'. Continuing without local secrets."
     else
-      . "$secrets_path"
+      . $secrets_path
     fi
   fi
   return 0
@@ -172,23 +172,23 @@ function drun() {
   if [ -z "$IN_DOCKER" ]; then
     [ -n "$VERBOSE" ] && echo "Running dockerized version of command: $command"
     [ "$image_tag" = 'latest' ] || [ "$image_tag" = 'master' ] && [ -z "$NOPULL" ] && docker pull "otomi/core:$image_tag" >/dev/null
-    docker run "$docker_terminal_params" --network host --rm \
-      "$LINUX_WORKAROUND" \
-      "$stack_volume" "$socket_volume" -v /tmp:/tmp \
-      -v "${KUBECONFIG:-$HOME/.kube/config}":/home/app/.kube/config \
-      -v "$HOME"/.ssh:/home/app/.ssh \
-      -v "$helm_config":/home/app/.config/helm \
-      -v "$HOME"/.config/gcloud:/home/app/.config/gcloud \
-      -v "$HOME"/.aws:/home/app/.aws \
-      -v "$HOME"/.azure:/home/app/.azure \
-      -v "$ENV_DIR":"$stack_dir"/env \
-      -e AZURE_TENANT_ID="$AZURE_TENANT_ID" \
-      -e AZURE_CLIENT_ID="$AZURE_CLIENT_ID" \
-      -e AZURE_CLIENT_SECRET="$AZURE_CLIENT_SECRET" \
-      -e AWS_REGION="$AWS_REGION" \
-      -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
-      -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
-      -e VAULT_TOKEN="$VAULT_TOKEN" \
+    docker run $docker_terminal_params --network host --rm \
+      $LINUX_WORKAROUND \
+      $stack_volume $socket_volume -v /tmp:/tmp \
+      -v ${KUBECONFIG:-$HOME/.kube/config}:/home/app/.kube/config \
+      -v $HOME/.ssh:/home/app/.ssh \
+      -v $helm_config:/home/app/.config/helm \
+      -v $HOME/.config/gcloud:/home/app/.config/gcloud \
+      -v $HOME/.aws:/home/app/.aws \
+      -v $HOME/.azure:/home/app/.azure \
+      -v $ENV_DIR:$stack_dir/env \
+      -e AZURE_TENANT_ID=$AZURE_TENANT_ID \
+      -e AZURE_CLIENT_ID=$AZURE_CLIENT_ID \
+      -e AZURE_CLIENT_SECRET=$AZURE_CLIENT_SECRET \
+      -e AWS_REGION=$AWS_REGION \
+      -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+      -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+      -e VAULT_TOKEN=$VAULT_TOKEN \
       -e VERBOSE="$VERBOSE" \
       -e IN_DOCKER='1' \
       -e GCLOUD_SERVICE_KEY="$GCLOUD_SERVICE_KEY" \
@@ -198,8 +198,8 @@ function drun() {
       -e TRACE="$TRACE" \
       -e DRY_RUN="$DRY_RUN" \
       -e CI="$CI" \
-      -w "$stack_dir" \
-      "$cmd_image" \
+      -w $stack_dir \
+      $cmd_image \
       bash -c "$command"
   else
     [ -n "$VERBOSE" ] && echo "Already in docker, will run native version of command: $command"
@@ -217,9 +217,9 @@ function execute() {
     check_kube_context=1
     set -o pipefail
     if [ -z "$FILE_OPT" ] && [ -z "$LABEL_OPT" ]; then
-      drun "bin/deploy.sh" | grep -Ev "$helmfile_output_hide"
+      drun "bin/deploy.sh" | grep -Ev $helmfile_output_hide
     else
-      drun "$exec crypt && hf apply --skip-deps $SKIP_CLEANUP" | grep -Ev "$helmfile_output_hide"
+      drun "$exec crypt && hf apply --skip-deps $SKIP_CLEANUP" | grep -Ev $helmfile_output_hide
     fi
     ;;
   argstest)
@@ -244,7 +244,7 @@ function execute() {
   commit)
     is_repo
     evaluate_secrets
-    git -C "$ENV_DIR" pull
+    git -C $ENV_DIR pull
     drun 'bin/validate-values.sh'
     drun 'bin/pre-commit.sh'
     git add . && git commit -m 'Manual commit' --no-verify
@@ -262,15 +262,15 @@ function execute() {
     evaluate_secrets
     check_kube_context=1
     set -o pipefail
-    drun "$exec crypt && hf diff --skip-deps $SKIP_CLEANUP" | grep -Ev "$helmfile_output_hide"
+    drun "$exec crypt && hf diff --skip-deps $SKIP_CLEANUP" | grep -Ev $helmfile_output_hide
     ;;
   destroy)
     evaluate_secrets
     check_kube_context=1
     if [ -z "$FILE_OPT" ] && [ -z "$LABEL_OPT" ]; then
-      drun "bin/destroy.sh $original_params" | grep -Ev "$helmfile_output_hide"
+      drun "bin/destroy.sh $original_params" | grep -Ev $helmfile_output_hide
     else
-      drun "$exec crypt && hf destroy" | grep -Ev "$helmfile_output_hide"
+      drun "$exec crypt && hf destroy" | grep -Ev $helmfile_output_hide
     fi
     ;;
   encrypt)
@@ -290,7 +290,7 @@ function execute() {
     evaluate_secrets
     check_kube_context=1
     set -o pipefail
-    drun "$exec crypt && hf $*" | grep -Ev "$helmfile_output_hide"
+    drun "$exec crypt && hf $*" | grep -Ev $helmfile_output_hide
     ;;
   lint)
     evaluate_secrets
@@ -300,7 +300,7 @@ function execute() {
   pull)
     is_repo
     evaluate_secrets
-    git -C "$ENV_DIR" pull
+    git -C $ENV_DIR pull
     drun 'bin/bootstrap.sh'
     ;;
   regcred)
@@ -319,7 +319,7 @@ function execute() {
     evaluate_secrets
     check_kube_context=1
     set -o pipefail
-    drun "$exec crypt && hf sync --skip-deps $SKIP_CLEANUP" | grep -Ev "$helmfile_output_hide"
+    drun "$exec crypt && hf sync --skip-deps $SKIP_CLEANUP" | grep -Ev $helmfile_output_hide
     ;;
   template)
     evaluate_secrets
@@ -344,7 +344,7 @@ function execute() {
     evaluate_secrets
     check_env_dir
     set -o pipefail
-    drun "$exec crypt && hf -f helmfile.tpl/helmfile-dump.yaml build" | grep -Ev "$helmfile_output_hide" | sed -e "$replace_paths_pattern"
+    drun "$exec crypt && hf -f helmfile.tpl/helmfile-dump.yaml build" | grep -Ev $helmfile_output_hide | sed -e $replace_paths_pattern
     ;;
   x)
     drun "$@"
@@ -358,4 +358,4 @@ function execute() {
 }
 [ -z "$command" ] && err "Missing command argument" && show_usage && exit 1
 
-execute "$command" "$@"
+execute $command "$@"

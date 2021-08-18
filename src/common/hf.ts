@@ -20,6 +20,7 @@ export type HFParams = {
   logLevel?: string | null
   args: string | string[]
 }
+
 const hfCore = (args: HFParams): ProcessPromise<ProcessOutput> => {
   const paramsCopy: HFParams = { ...args }
   paramsCopy.fileOpts = asArray(paramsCopy.fileOpts ?? [])
@@ -103,7 +104,10 @@ export const values = async (opts?: ValuesOptions): Promise<any | string> => {
     if (opts?.asString) return dump(value.clean)
     return value.clean
   }
-  const output = await hf({ fileOpts: './helmfile.tpl/helmfile-dump.yaml', args: 'build' }, { trim: true })
+  const output = await hf(
+    { fileOpts: `${process.cwd()}/helmfile.tpl/helmfile-dump.yaml`, args: 'build' },
+    { trim: true },
+  )
   value.clean = load(output.stdout) as any
   value.rp = load(replaceHFPaths(output.stdout)) as any
   if (opts?.asString) return opts && opts.replacePath ? replaceHFPaths(output.stdout) : output.stdout
