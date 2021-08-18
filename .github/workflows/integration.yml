@@ -21,8 +21,6 @@ jobs:
     container:
       image: otomi/tools:kind
       options: --user=root:root
-      ports:
-        - 6443:6443
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -31,20 +29,19 @@ jobs:
       - name: k8s in Docker
         run: |
           export PATH=$PATH:/home/app/tools
-          cwd=$(pwd)
+          export KUBECONFIG=/root/.kube/config
+
+          kind create cluster --wait 30s \
+            --name kind \
+            --image kindest/node:${{ env.KIND_TAG }} \
+            --config=./kind-config.yaml
+
           mkdir -p ./env/env
           cp -r ./tests/fixtures/env/ ./env/
           ls -lah ./env/env
 
           npm ci && \
             npm run compile && \
-             /usr/bin/node --experimental-specifier-resolution=node ./dist/otomi.js -- apply
-
-          exit 0
-
-          kind create cluster --wait 30s \
-            --name kind \
-            --image kindest/node:${{ env.KIND_TAG }} \
-            --config=./kind-config.yaml
+            /usr/bin/node --experimental-specifier-resolution=node ./dist/otomi.js -- apply
 
           kind delete cluster --name kind
