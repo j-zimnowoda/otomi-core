@@ -25,7 +25,7 @@ alias kcg="k config current-context"
 alias kcu="k config use-context"
 alias kp="k proxy &"
 
-function int() {
+function kint() {
   [ $(act --version | cut -d " " -f 3) = "0.2.24" ] && \
     act -W ./.github/workflows/integration.yml --rm 
 }
