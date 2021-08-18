@@ -28,12 +28,11 @@ jobs:
         uses: actions/checkout@v2
         with:
           token: ${{ env.GIT_PASSWORD }}
-          path: otomi-core
       - name: Create KinD
         run: |
-          cd otomi-core
           ls -lah
-          npm ci && npx tsc && chmod +x ./dist/otomi.js \
+          npm ci && \
+            npm run compile && \
             ENV_DIR=./tests/fixtures /usr/bin/node --experimental-specifier-resolution=node ./dist/otomi.js -- -h
 
           exit 0
