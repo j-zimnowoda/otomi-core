@@ -24,16 +24,21 @@ jobs:
       ports:
         - 6443:6443
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v2
         with:
           token: ${{ env.GIT_PASSWORD }}
-      - name: Create KinD
+      - name: k8s in Docker
         run: |
           export PATH=$PATH:/home/app/tools
+          cwd=$(pwd)
+          mkdir -p ./env/env
+          cp -r ./tests/fixtures/env/ ./env/
+          ls -lah ./env/env
+
           npm ci && \
             npm run compile && \
-            ENV_DIR=./tests/fixtures /usr/bin/node --experimental-specifier-resolution=node ./dist/otomi.js -- apply
+             /usr/bin/node --experimental-specifier-resolution=node ./dist/otomi.js -- apply
 
           exit 0
 
