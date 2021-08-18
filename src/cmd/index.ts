@@ -11,7 +11,6 @@ import { module as encryptModule } from './encrypt'
 import { module as genDroneModule } from './gen-drone'
 import { module as genSopsModule } from './gen-sops'
 import { module as hfModule } from './hf'
-import { module as kindModule } from './kind'
 import { module as lintModule } from './lint'
 import { module as playgroundModule } from './playground'
 import { module as pullModule } from './pull'
@@ -39,7 +38,6 @@ export { module as encrypt } from './encrypt'
 export { module as genDrone } from './gen-drone'
 export { module as genSops } from './gen-sops'
 export { module as hf } from './hf'
-export { module as kind } from './kind'
 export { module as lint } from './lint'
 export { module as pull } from './pull'
 export { module as rotateKeys } from './rotate-keys'
@@ -67,7 +65,6 @@ export const commands: CommandModule[] = [
   genDroneModule,
   genSopsModule,
   hfModule,
-  kindModule,
   lintModule,
   playgroundModule,
   pullModule,
