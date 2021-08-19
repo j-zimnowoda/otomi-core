@@ -17,33 +17,24 @@ env:
 
 jobs:
   kind:
-    runs-on: ubuntu-latest
-    container:
-      image: otomi/tools:kind
-      options: --user=root:root
+    runs-on: ubuntu-18.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
           token: ${{ env.GIT_PASSWORD }}
+      - name: Create k8s Kind Cluster
+        uses: helm/kind-action@v1.2.0
+        continue-on-error: true
       # Important info: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#docker-container-filesystem
       - name: K8s in Docker
         run: |
-          export PATH=$PATH:/home/app/tools
-          export KUBECONFIG=$HOME/.kube/config
-
-          kind create cluster \
-            --name kind \
-            --kubeconfig $KUBECONFIG \
-            --image kindest/node:${{ env.KIND_TAG }} \
-            --config=./kind-config.yaml
-
           mkdir -p ./env/env
           cp -r ./tests/fixtures/env/ ./env/
-          ls -lah ./env/env
 
           npm ci && \
             npm run compile && \
             /usr/bin/node --experimental-specifier-resolution=node ./dist/otomi.js -- apply
-
-          kind delete cluster --name kind
+        continue-on-error: true
+      - name: Clean up
+        run: kind delete cluster --name chart-testing
