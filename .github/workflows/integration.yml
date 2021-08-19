@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: otomi/tools:kind
-      options: --user=root:root
+      options: --user=root:root --network=host
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -37,6 +37,10 @@ jobs:
             --kubeconfig $KUBECONFIG \
             --image kindest/node:${{ env.KIND_TAG }} \
             --config=./kind-config.yaml
+
+          kubectl get po
+
+          exit 0
 
           mkdir -p ./env/env
           cp -r ./tests/fixtures/env/ ./env/
