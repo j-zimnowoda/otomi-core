@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: otomi/tools:kind
-      options: --user=root:root --network=host
+      options: --user=root:root
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -31,6 +31,9 @@ jobs:
         run: |
           export PATH=$PATH:/home/app/tools
           export KUBECONFIG=$HOME/.kube/config
+          export KIND_EXPERIMENTAL_DOCKER_NETWORK=${{ job.container.network }}
+
+          echo $KIND_EXPERIMENTAL_DOCKER_NETWORK
 
           kind create cluster \
             --name kind \
