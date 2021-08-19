@@ -40,12 +40,18 @@ jobs:
             --image kindest/node:${{ env.KIND_TAG }} \
             --config=./kind-config.yaml
 
-          docker network inspect $KIND_EXPERIMENTAL_DOCKER_NETWORK 
+          # docker network inspect $KIND_EXPERIMENTAL_DOCKER_NETWORK 
 
-          apt install iputils-ping -y
-          ping kind-control-plane
+          # This works :)
+            # apt install iputils-ping -y
+            # ping kind-control-plane
+
+          kubectl config set-cluster kind-kind --server=https://kind-control-plane:6443
+
+          kubectl get po 
 
           exit 0
+
 
           mkdir -p ./env/env
           cp -r ./tests/fixtures/env/ ./env/
