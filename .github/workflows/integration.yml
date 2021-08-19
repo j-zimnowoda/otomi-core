@@ -40,7 +40,7 @@ jobs:
             --image kindest/node:${{ env.KIND_TAG }} \
             --config=./kind-config.yaml
 
-          docker network inspect $KIND_EXPERIMENTAL_DOCKER_NETWORK
+          docker network inspect $KIND_EXPERIMENTAL_DOCKER_NETWORK 
 
 
           exit 0
