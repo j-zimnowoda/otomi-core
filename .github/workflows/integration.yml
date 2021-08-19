@@ -32,26 +32,11 @@ jobs:
           export PATH=$PATH:/home/app/tools
           export KUBECONFIG=$HOME/.kube/config
 
-          whoami
-
-          mkdir -p $HOME/.kube
-          touch $KUBECONFIG
-          chown -R root:root $HOME
-          chmod 777 $KUBECONFIG
-          ls -lah $KUBECONFIG
-
-          kind create cluster --wait 5m \
+          kind create cluster \
             --name kind \
             --kubeconfig $KUBECONFIG \
             --image kindest/node:${{ env.KIND_TAG }} \
             --config=./kind-config.yaml
-
-          echo "DEBUG INFO INCOMING........"
-          # cat ${HOME}/.kube/config
-          docker ps -a
-          # docker inspect kind-control-plane -f "{{json .NetworkSettings.Networks }}"
-          kubectl cluster-info --context kind-kind --kubeconfig /github/home/.kube/config
-          echo "----------------------------"
 
           mkdir -p ./env/env
           cp -r ./tests/fixtures/env/ ./env/
