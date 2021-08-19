@@ -42,13 +42,10 @@ jobs:
 
           docker network inspect $KIND_EXPERIMENTAL_DOCKER_NETWORK 
 
-
-          exit 0
-
-
           apt install iputils-ping -y
           ping kind-control-plane
 
+          exit 0
 
           mkdir -p ./env/env
           cp -r ./tests/fixtures/env/ ./env/
