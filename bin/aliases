@@ -27,7 +27,7 @@ alias kp="k proxy &"
 
 function kint() {
   [ $(act --version | cut -d " " -f 3) = "0.2.24" ] && \
-    act --rm -W ./.github/workflows/integration.yml -P ubuntu-18.04=nektos/act-environments-ubuntu:18.04
+    act -W ./.github/workflows/integration.yml -P ubuntu-20.04=ghcr.io/catthehacker/ubuntu:act-20.04 "$@"
 }
 
 function kpo() {

@@ -17,24 +17,31 @@ env:
 
 jobs:
   kind:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
           token: ${{ env.GIT_PASSWORD }}
-      - name: Create k8s Kind Cluster
+      - name: Upgrade node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+      # - name: Setup helmfile
+      #   uses: mamezou-tech/setup-helmfile@v0.8.0
+      - name: Create k8s KinD cluster
         uses: helm/kind-action@v1.2.0
         continue-on-error: true
       # Important info: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#docker-container-filesystem
       - name: K8s in Docker
         run: |
-          mkdir -p ./env/env
-          cp -r ./tests/fixtures/env/ ./env/
+          kubectl get po 
+          # mkdir -p ./env/env
+          # cp -r ./tests/fixtures/env/ ./env/
 
-          npm ci && \
-            npm run compile && \
-            /usr/bin/node --experimental-specifier-resolution=node ./dist/otomi.js -- apply
+          # npm ci && \
+          #   npm run compile && \
+          #   node --experimental-specifier-resolution=node ./dist/otomi.js -- apply
         continue-on-error: true
-      - name: Clean up
+      - name: Clean up k8s KinD cluster
         run: kind delete cluster --name chart-testing
