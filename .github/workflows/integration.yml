@@ -28,7 +28,7 @@ jobs:
           token: ${{ env.GIT_PASSWORD }}
       # Important info: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#docker-container-filesystem
       - name: K8s in Docker
-        # continue-on-error: true
+        continue-on-error: true
         run: |
           export PATH=$PATH:/home/app/tools
           export KUBECONFIG=$HOME/.kube/config
@@ -40,24 +40,14 @@ jobs:
             --image kindest/node:${{ env.KIND_TAG }} \
             --config=./kind-config.yaml
 
-          # docker network inspect $KIND_EXPERIMENTAL_DOCKER_NETWORK 
-
-          # This works :)
-            # apt install iputils-ping -y
-            # ping kind-control-plane
-
-          kubectl config set-cluster kind-kind --server=https://kind-control-plane:6443
-
-          kubectl get po 
-
-          exit 0
-
+          [ -n "$KIND_EXPERIMENTAL_DOCKER_NETWORK" ] && \
+            kubectl config set-cluster kind-kind --server=https://kind-control-plane:6443
 
           mkdir -p ./env/env
           cp -r ./tests/fixtures/env/ ./env/
-          ls -lah ./env/env
 
-          npm ci && \
+          npm set-script prepare "" && \
+            npm ci && \
             npm run compile && \
             /usr/bin/node --experimental-specifier-resolution=node ./dist/otomi.js -- apply
       - name: Clean up k8s in Docker
