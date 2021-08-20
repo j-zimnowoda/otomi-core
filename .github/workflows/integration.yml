@@ -26,6 +26,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           token: ${{ env.GIT_PASSWORD }}
+      - run: helm plugin install https://github.com/databus23/helm-diff
       # Important info: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#docker-container-filesystem
       - name: K8s in Docker
         continue-on-error: true
