@@ -13,42 +13,157 @@ env:
   GIT_USER: redkubesbot
   GIT_PASSWORD: ${{ secrets.GIT_PASSWORD }}
   DOCKER_PASSWORD: ${{ secrets.DOCKERHUB_OTOMI_TOKEN }}
+  KIND_EXPERIMENTAL_DOCKER_NETWORK: ${{ job.container.network }}
   KIND_TAG: v1.19.0
 
+# Important info: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#docker-container-filesystem
 jobs:
   kind:
-    runs-on: ubuntu-latest
-    container:
-      image: otomi/tools:kind
-      options: --user=root:root
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
         with:
           token: ${{ env.GIT_PASSWORD }}
-      # Important info: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#docker-container-filesystem
-      - name: K8s in Docker
-        continue-on-error: true
+      - uses: actions/checkout@master
+      - uses: engineerd/setup-kind@v0.5.0
+      # - name: Add KinD to Docker network
+      #   run: |
+      #     [ -n "$KIND_EXPERIMENTAL_DOCKER_NETWORK" ] && \
+      #       kubectl config set-cluster kind --server=https://kind-control-plane:6443
+      - name: Helm install Otomi chart
         run: |
-          export PATH=$PATH:/home/app/tools
-          export KUBECONFIG=$HOME/.kube/config
-          export KIND_EXPERIMENTAL_DOCKER_NETWORK=${{ job.container.network }}
-
-          kind create cluster \
-            --name kind \
-            --kubeconfig $KUBECONFIG \
-            --image kindest/node:${{ env.KIND_TAG }} \
-            --config=./kind-config.yaml
-
-          [ -n "$KIND_EXPERIMENTAL_DOCKER_NETWORK" ] && \
-            kubectl config set-cluster kind-kind --server=https://kind-control-plane:6443
-
-          mkdir -p ./env/env
-          cp -r ./tests/fixtures/env/ ./env/
-
-          npm set-script prepare "" && \
-            npm ci && \
-            npm run compile && \
-            /usr/bin/node --experimental-specifier-resolution=node ./dist/otomi.js -- apply
+          cat <<EOF | helm install otomi chart/otomi -f -
+          # image:
+          #   tag: master
+          cluster:
+            owner: redkubes
+            apiServer: 'https://B009AC1FEC8D36E74A7A54F30C9D0F58.gr7.eu-central-1.eks.amazonaws.com'
+            k8sVersion: '1.19'
+            name: jeho
+            provider: aws
+            domainSuffix: jeho1.eks.otomi.cloud
+            region: eu-central-1
+          oidc:
+            adminGroupID: e69ded30-0882-4490-8e0f-2e67625a0693
+            authUrl: https://login.microsoftonline.com/xxxxx/oauth2/authorize
+            issuer: https://login.microsoftonline.com/57a3f6ea-7e70-4260-acb4-e06ce452f695/
+            teamAdminGroupID: 3c63814c-59df-46c3-9a69-d9e1c3611097
+            tenantID: 57a3f6ea-7e70-4260-acb4-e06ce452f695
+            tokenUrl: https://login.microsoftonline.com/57a3f6ea-7e70-4260-acb4-e06ce452f695/oauth2/token
+            clientID: 5eb129f2-1b26-4910-a05a-70d8b6a380cd
+            clientSecret: FPz36T8rSF..sV__5Qyqix~.mD2SL6O3o.
+          otomi:
+            version: pushing-to-gitea
+            adminPassword: bladibla
+            isMultitenant: true
+            # pullSecret: eyJhdXRocyI6eyJldS5nY3IuaW8iOnsidXNlcm5hbWUiOiJfanNvbl9rZXkiLCJwYXNzd29yZCI6IntcbiAgXCJ0eXBlXCI6IFwic2VydmljZV9hY2NvdW50XCIsXG4gIFwicHJvamVjdF9pZFwiOiBcIm90b21pLWNsb3VkXCIsXG4gIFwicHJpdmF0ZV9rZXlfaWRcIjogXCJmOGU1MzNjOWU4MTc5Zjg5ZDVmNTEyYjhlYmE3NTE3OWM4ZDg1NDE2XCIsXG4gIFwicHJpdmF0ZV9rZXlcIjogXCItLS0tLUJFR0lOIFBSSVZBVEUgS0VZLS0tLS1cXG5NSUlFdmdJQkFEQU5CZ2txaGtpRzl3MEJBUUVGQUFTQ0JLZ3dnZ1NrQWdFQUFvSUJBUUNqODZQZStpQWdsMTJGXFxuQk0zT2pORmp5eVYrWGlHOEs4dVBXVmVCb3p3TjhidURHcUV0WVE0RWJrNGxEMngxNVAydnBUUjBsYnk0cVpNcFxcbmtvM2JVZXRUNEIwdnB2ekYybnR3QWZJUGdWNWRFZnlWVkpEcVFoaGJibkJrL0ZaZkxLQVh2NWw0TjFMalNEZGFcXG5haUpNdWltZ1VtSlZEbzdKQ3MxeTI3dzVXZ29kTklBNDhlUGRmOXJ3aGJ0TmY2UjByMlpkV0IxZXNMTFBlNnpSXFxucFNmZUp0ZGJEM0tuc1FsZ1JQZ2txWFNVVnE4UTNsd1F0RlBZMGhPZDNlVXhnOHp3dDE4L2ROQndSZHpDVDlyY1xcbkpRQ3JyaFY4bEVSeTdWTTA3U0UxMlFKSXRtV05vS25ML091VUFRUllVNXBBNHZsZ1lpWldMZzBwK2RvT1dwMFRcXG4xUWFEcUdJRkFnTUJBQUVDZ2dFQUJpamo5ZjlyUUJZM3hRVGdiNXR5VFgvSEpaZUhTSERUeWN1M1FpOWVGUDhKXFxuUnJ4MEpFYVNkbituYjNTRUpHekpURFZXZ20vU3dwUmFhMVF1Z0xnejhYZUkyUzY2cmZ0T3FtOWtSd2xiQUgrcFxcbnYvbUlwVWg4N2toNHNBNmI5eUR2MWR5VXVVUEkyVEd3SkxVNm15dmVYdi9oWW1VMDM2Qkloa0Z6c2Fyc21OcTlcXG41M3lOcnJHZ0x0cDEyZC9LL3BGRjlyd1pZUE1wYXdVSDllUU9NL2xsMjJIajAzc25mbWlEQnk3bzdxOHA5V2JNXFxuMllBU05SNUt6YVplRTFtRGRyZzR0b0tqemdUUXE5M3AvZTlIazRESUlFV0NSWE5xU0xyT3RIVkk1N3p6TkRhWFxcbktRdithbXFEclFFRjZWNkJURmZjY3A1d0hWNEh2eGU1Y1hmT0FVTkNNUUtCZ1FEZm1nb1lDMEp3SVhUSGNEMFFcXG5McUs3U1FQQWRrZzR3cXVGVU9yTlVaL1hhY1gzTEdOZTdoeStSZWlXKzdyWnFqSW0wUWxkNGJraDlJYmZGcVFKXFxud3pma1JGc3Qwai96bzE3bzBKTEp4a1A4bTA3eTY0d1BWdXY0L1dLbG9SQ21CcFVqREJSaW9CZTJDL1JQQjh4RlxcblV3ZlNBK0J1K09Jdmh2K215RFM5SmtWYzhRS0JnUUM3dFFlS216dllML293R3lqQm5ubGRtRkFXbm5zMGdGUTVcXG5aTTl6S1NYSGlTS3VET3BUUEJEeGcwUXE2ZnN2Wi85VTlFdy9vbHlwbmNnUlZrOURlbmZzY0tDaUtLNDMyL01lXFxuRjVwNm1tbzJ0cnVvWm1CSGFjR3d0SnFCZFRZSjJWdk41eDF1L3VNd0pTZW5GM2FMMU9Gdkh6QVhtTkE2R1RQQ1xcbi9nTkV6eURtVlFLQmdRQzBteEJDSVg0VllnQ1lRc0VmdS90M09OK042andsbEovRCsvcmJ3bTFRS2tCYmlIL3ZcXG5JbmNXL1JLRU9XblAvRmVyNExZbkhYWlN4ZGJXaE13VWtwa25pRXI1ZE5SdzcybHV0V0dMRnRpOVJaajhQMk9PXFxuMUUrZmV0TGVJMzEyRE9VVFBPT09VZTgwL096bGxNL2F3dGtUT2t4aWRpY0Q2bysrWUFHeE1pTmVrUUtCZ0FMNVxcbjBML0t6RDBXTGFJN20vN04wMkMvZkcyUFg2YXFiaXRteEw4dnBOQ3dCT083Z3ErRklVT2k4QjY2RE9ob2ZxekxcXG5IclpYalo2R3lOZzFoUll0eDk3d3Zpc3o5K2NjenBMb2p1Tm90VXhldzBUZE1xT1BNcW5wZ3hXUVZTWDgweTdGXFxuZmpyM1FZVE80ZjBOS3l6MldBaVo5dm80eXZ4UXovaEViS3JYbWM3dEFvR0JBSTVLTlZaTXdhaEdQS3gvcTJ2WVxcbkJvREY4RzlsVVRZNUdNQnVmbWRpTW9NTTk3K2VUdXlleU5IQ3JIZG1wWG5ab29FWnJITDFLNFA4YUZ2ektzczJcXG5wT3g4NHR4Tlo4eGVrMEcwZDdlRlVyc1ppeTZCVG50cmRFbjhaeDFZUHNnTlJqUDNqMnFndGtWbG0zUk1Ray9xXFxuRG56S01Gd1l6M3Rkdkd3ZDYwbE13MSs1XFxuLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLVxcblwiLFxuICBcImNsaWVudF9lbWFpbFwiOiBcImdjci1hdXRoLXJvLW90b21pQG90b21pLWNsb3VkLmlhbS5nc2VydmljZWFjY291bnQuY29tXCIsXG4gIFwiY2xpZW50X2lkXCI6IFwiMTA3MzkyNjIwMDg4NzE5OTMyODU4XCIsXG4gIFwiYXV0aF91cmlcIjogXCJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vby9vYXV0aDIvYXV0aFwiLFxuICBcInRva2VuX3VyaVwiOiBcImh0dHBzOi8vb2F1dGgyLmdvb2dsZWFwaXMuY29tL3Rva2VuXCIsXG4gIFwiYXV0aF9wcm92aWRlcl94NTA5X2NlcnRfdXJsXCI6IFwiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vb2F1dGgyL3YxL2NlcnRzXCIsXG4gIFwiY2xpZW50X3g1MDlfY2VydF91cmxcIjogXCJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9yb2JvdC92MS9tZXRhZGF0YS94NTA5L2djci1hdXRoLXJvLW90b21pJTQwb3RvbWktY2xvdWQuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb21cIlxufSIsImVtYWlsIjoibm90QHZhbC5pZCIsImF1dGgiOiJYMnB6YjI1ZmEyVjVPbnNLSUNBaWRIbHdaU0k2SUNKelpYSjJhV05sWDJGalkyOTFiblFpTEFvZ0lDSndjbTlxWldOMFgybGtJam9nSW05MGIyMXBMV05zYjNWa0lpd0tJQ0FpY0hKcGRtRjBaVjlyWlhsZmFXUWlPaUFpWmpobE5UTXpZemxsT0RFM09XWTRPV1ExWmpVeE1tSTRaV0poTnpVeE56bGpPR1E0TlRReE5pSXNDaUFnSW5CeWFYWmhkR1ZmYTJWNUlqb2dJaTB0TFMwdFFrVkhTVTRnVUZKSlZrRlVSU0JMUlZrdExTMHRMVnh1VFVsSlJYWm5TVUpCUkVGT1FtZHJjV2hyYVVjNWR6QkNRVkZGUmtGQlUwTkNTMmQzWjJkVGEwRm5SVUZCYjBsQ1FWRkRhamcyVUdVcmFVRm5iREV5Umx4dVFrMHpUMnBPUm1wNWVWWXJXR2xIT0VzNGRWQlhWbVZDYjNwM1RqaGlkVVJIY1VWMFdWRTBSV0pyTkd4RU1uZ3hOVkF5ZG5CVVVqQnNZbmswY1ZwTmNGeHVhMjh6WWxWbGRGUTBRakIyY0haNlJqSnVkSGRCWmtsUVoxWTFaRVZtZVZaV1NrUnhVV2hvWW1KdVFtc3ZSbHBtVEV0QldIWTFiRFJPTVV4cVUwUmtZVnh1WVdsS1RYVnBiV2RWYlVwV1JHODNTa056TVhreU4zYzFWMmR2WkU1SlFUUTRaVkJrWmpseWQyaGlkRTVtTmxJd2NqSmFaRmRDTVdWelRFeFFaVFo2VWx4dWNGTm1aVXAwWkdKRU0wdHVjMUZzWjFKUVoydHhXRk5WVm5FNFVUTnNkMUYwUmxCWk1HaFBaRE5sVlhobk9IcDNkREU0TDJST1FuZFNaSHBEVkRseVkxeHVTbEZEY25Kb1ZqaHNSVko1TjFaTk1EZFRSVEV5VVVwSmRHMVhUbTlMYmt3dlQzVlZRVkZTV1ZVMWNFRTBkbXhuV1dsYVYweG5NSEFyWkc5UFYzQXdWRnh1TVZGaFJIRkhTVVpCWjAxQ1FVRkZRMmRuUlVGQ2FXcHFPV1k1Y2xGQ1dUTjRVVlJuWWpWMGVWUllMMGhLV21WSVUwaEVWSGxqZFROUmFUbGxSbEE0U2x4dVVuSjRNRXBGWVZOa2JpdHVZak5UUlVwSGVrcFVSRlpYWjIwdlUzZHdVbUZoTVZGMVoweG5lamhZWlVreVV6WTJjbVowVDNGdE9XdFNkMnhpUVVncmNGeHVkaTl0U1hCVmFEZzNhMmcwYzBFMllqbDVSSFl4WkhsVmRWVlFTVEpVUjNkS1RGVTJiWGwyWlZoMkwyaFpiVlV3TXpaQ1NXaHJSbnB6WVhKemJVNXhPVnh1TlRONVRuSnlSMmRNZEhBeE1tUXZTeTl3UmtZNWNuZGFXVkJOY0dGM1ZVZzVaVkZQVFM5c2JESXlTR293TTNOdVptMXBSRUo1TjI4M2NUaHdPVmRpVFZ4dU1sbEJVMDVTTlV0NllWcGxSVEZ0UkdSeVp6UjBiMHRxZW1kVVVYRTVNM0F2WlRsSWF6UkVTVWxGVjBOU1dFNXhVMHh5VDNSSVZrazFOM3A2VGtSaFdGeHVTMUYySzJGdGNVUnlVVVZHTmxZMlFsUkdabU5qY0RWM1NGWTBTSFo0WlRWaldHWlBRVlZPUTAxUlMwSm5VVVJtYldkdldVTXdTbmRKV0ZSSVkwUXdVVnh1VEhGTE4xTlJVRUZrYTJjMGQzRjFSbFZQY2s1VldpOVlZV05ZTTB4SFRtVTNhSGtyVW1WcFZ5czNjbHB4YWtsdE1GRnNaRFJpYTJnNVNXSm1SbkZSU2x4dWQzcG1hMUpHYzNRd2FpOTZiekUzYnpCS1RFcDRhMUE0YlRBM2VUWTBkMUJXZFhZMEwxZExiRzlTUTIxQ2NGVnFSRUpTYVc5Q1pUSkRMMUpRUWpoNFJseHVWWGRtVTBFclFuVXJUMGwyYUhZcmJYbEVVemxLYTFaak9GRkxRbWRSUXpkMFVXVkxiWHAyV1V3dmIzZEhlV3BDYm01c1pHMUdRVmR1Ym5Nd1owWlJOVnh1V2swNWVrdFRXRWhwVTB0MVJFOXdWRkJDUkhobk1GRnhObVp6ZGxvdk9WVTVSWGN2YjJ4NWNHNWpaMUpXYXpsRVpXNW1jMk5MUTJsTFN6UXpNaTlOWlZ4dVJqVndObTF0YnpKMGNuVnZXbTFDU0dGalIzZDBTbkZDWkZSWlNqSldkazQxZURGMUwzVk5kMHBUWlc1R00yRk1NVTlHZGtoNlFWaHRUa0UyUjFSUVExeHVMMmRPUlhwNVJHMVdVVXRDWjFGRE1HMTRRa05KV0RSV1dXZERXVkZ6UldaMUwzUXpUMDRyVGpacWQyeHNTaTlFS3k5eVluZHRNVkZMYTBKaWFVZ3ZkbHh1U1c1alZ5OVNTMFZQVjI1UUwwWmxjalJNV1c1SVdGcFRlR1JpVjJoTmQxVnJjR3R1YVVWeU5XUk9VbmMzTW14MWRGZEhURVowYVRsU1dtbzRVREpQVDF4dU1VVXJabVYwVEdWSk16RXlSRTlWVkZCUFQwOVZaVGd3TDA5NmJHeE5MMkYzZEd0VVQydDRhV1JwWTBRMmJ5c3JXVUZIZUUxcFRtVnJVVXRDWjBGTU5WeHVNRXd2UzNwRU1GZE1ZVWszYlM4M1RqQXlReTltUnpKUVdEWmhjV0pwZEcxNFREaDJjRTVEZDBKUFR6ZG5jU3RHU1ZWUGFUaENOalpFVDJodlpuRjZURnh1U0hKYVdHcGFOa2Q1VG1jeGFGSlpkSGc1TjNkMmFYTjZPU3RqWTNwd1RHOXFkVTV2ZEZWNFpYY3dWR1JOY1U5UVRYRnVjR2Q0VjFGV1UxZzRNSGszUmx4dVptcHlNMUZaVkU4MFpqQk9TM2w2TWxkQmFWbzVkbTgwZVhaNFVYb3ZhRVZpUzNKWWJXTTNkRUZ2UjBKQlNUVkxUbFphVFhkaGFFZFFTM2d2Y1RKMldWeHVRbTlFUmpoSE9XeFZWRmsxUjAxQ2RXWnRaR2xOYjAxTk9UY3JaVlIxZVdWNVRraERja2hrYlhCWWJscHZiMFZhY2toTU1VczBVRGhoUm5aNlMzTnpNbHh1Y0U5NE9EUjBlRTVhT0hobGF6QkhNR1EzWlVaVmNuTmFhWGsyUWxSdWRISmtSVzQ0V25neFdWQnpaMDVTYWxBemFqSnhaM1JyVm14dE0xSk5VV3N2Y1Z4dVJHNTZTMDFHZDFsNk0zUmtka2QzWkRZd2JFMTNNU3MxWEc0dExTMHRMVVZPUkNCUVVrbFdRVlJGSUV0RldTMHRMUzB0WEc0aUxBb2dJQ0pqYkdsbGJuUmZaVzFoYVd3aU9pQWlaMk55TFdGMWRHZ3RjbTh0YjNSdmJXbEFiM1J2YldrdFkyeHZkV1F1YVdGdExtZHpaWEoyYVdObFlXTmpiM1Z1ZEM1amIyMGlMQW9nSUNKamJHbGxiblJmYVdRaU9pQWlNVEEzTXpreU5qSXdNRGc0TnpFNU9UTXlPRFU0SWl3S0lDQWlZWFYwYUY5MWNta2lPaUFpYUhSMGNITTZMeTloWTJOdmRXNTBjeTVuYjI5bmJHVXVZMjl0TDI4dmIyRjFkR2d5TDJGMWRHZ2lMQW9nSUNKMGIydGxibDkxY21raU9pQWlhSFIwY0hNNkx5OXZZWFYwYURJdVoyOXZaMnhsWVhCcGN5NWpiMjB2ZEc5clpXNGlMQW9nSUNKaGRYUm9YM0J5YjNacFpHVnlYM2cxTURsZlkyVnlkRjkxY213aU9pQWlhSFIwY0hNNkx5OTNkM2N1WjI5dloyeGxZWEJwY3k1amIyMHZiMkYxZEdneUwzWXhMMk5sY25Seklpd0tJQ0FpWTJ4cFpXNTBYM2cxTURsZlkyVnlkRjkxY213aU9pQWlhSFIwY0hNNkx5OTNkM2N1WjI5dloyeGxZWEJwY3k1amIyMHZjbTlpYjNRdmRqRXZiV1YwWVdSaGRHRXZlRFV3T1M5blkzSXRZWFYwYUMxeWJ5MXZkRzl0YVNVME1HOTBiMjFwTFdOc2IzVmtMbWxoYlM1bmMyVnlkbWxqWldGalkyOTFiblF1WTI5dElncDkifX19
+            globalPullSecret:
+              username: otomi
+              password: f7c00687-0223-44ac-931b-a56c6bb0144f
+          # kms:
+          #   sops:
+          #     provider: google
+          #     google:
+          #       accountJson: |
+          #         {
+          #           "type": "service_account",
+          #           "project_id": "otomi-cloud",
+          #           "private_key_id": "38c2894c483ce15bb97084cd285dd93e7a573f4d",
+          #           "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCtdmuYK8Pf8i33\nmbgJfCaYFF8l4TEn+7LUSipLrT9kNsTCN32LusC7cpPcS4AELgGuStlicHVKuWxD\nRxKs5VehqLePgS/pMYqR8NmCsOy06n8yw2dVcuBYW0B9jcqeQqtyoS1h04/U43q+\nUJ0hX4odEqpZJZb2XV+xww3zfpytTgNHUah0lkG9Ehuz+gRGVQWrWzJt3ci0BE1k\nggc8bvtsjVBx7lswX5HrlU5CCnOJzQpIbvfw664ygMZtCtXqM9GTYMk5A/FHhDOe\nTeiLXDUAfyxhWARB75t1LYLeFTtiFV8XBovUTtvSzkaGueJRKARRRYG+KRDyqZsF\nSWzB1wBfAgMBAAECggEAAwrLitm3vXoPI6gBgZBRObkZvbX/HHceUUKHWAkYC2BS\nVOOPxihjgo20lnCg6zr9bHYb4TsXA4YNdWdE42N4NdUsSXKihm0snx3DDXoNuy5Z\ndx9a3IrUzCQX2EN7cVJxiI445xq+bRMPrzgGDUPVcoCbcaVH7taqAeLph613ZnQA\nmahYVUXPaDtjwf4qrswO3hMxLiKpfzb9neDzvAli5kfFOxyMXkJoCVI7XDS1e/qp\nXDuXAsHXikP8uN5Gp0KQJiYnpwg3HesmNfa+JRcKmwvTdos/nPbCZkAso+kbL3wz\nncEIUgZ/eQJXTgKLeJJlVRzLLWqjCJQ0YFn+ASilIQKBgQDtbnl/Wpvrm8xmsVkb\ni/8txFsCFvVw5h7ScH9jRs8o827HHFGuQunSNc7gnySbe3M8Rm/hpl/QM9rQ+Vdw\nasjuWkpzvOg+X6lRTdDbp0MnFyy7snYn+pLaCMmNFt6thIizeYSuoPtryUMvrmSk\nPzawoGzYElJOJk1Sj6PihHhjjwKBgQC7Bz9sgPEowhiEQ6ELg26epxXoBzoia1TG\nquRsxz+mQZW7GnqhCdw+g48ae3WgPespCCi5un62hs8U22hpYzBYnK9vYr8gkzOI\ndJH73O3WqnK/6c98zCyQtQ1wOmjektattDVYc7QAY+2B/qpKuqGEFFMsVZQIdCOE\nt2Lar3PuMQKBgQCufsOyUkBHTzBQxMRNV31KAIY2KfNmbul2FZG5v5+eZBIlKW3q\nWWkIwdzx/mPkFT1irg2p1CGUnZeSf73Ac+qKKjePieVRefKxOzRlSi8zOnf41ja6\nORDWRyEBnS44bjAdXxChWtSMqdTD5TI39/FUrAJyZjyxDLtFEyYJ4vurhwKBgH/I\npuvSeXK4kpmjv1+ncCgTzuLWNUEZBjYqwqETzYghXVUV9V0b6JAJwPd+DNLsG0TQ\nn0qugi7hkpEUi5UdwQV6IF9BH4b5LAd6ZdeojhPSJ066SBpjQbupCEJ6lfYka2sJ\nKj2B6CUwITFlNyKRuxML8/vhiJ/yAeaGiZMSt2mxAoGBANTgBqbGyRPMYdZ+wjyM\nx7m7zU3w2nu9yibVVGEbUZKx00S6PZYXybaKHWWojI+Xr4BO3bUDpdWlQBUnZn+V\nGgs7TwqCXdQqrMPu7ymQQP5GlER69uo/70X4GAHvXcb0xyZbgVT4Y+jWZiexi1PJ\n42J1HmMklnT4Uy9pPugd2v2r\n-----END PRIVATE KEY-----\n",
+          #           "client_email": "gks-vault@otomi-cloud.iam.gserviceaccount.com",
+          #           "client_id": "109902196389004112963",
+          #           "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+          #           "token_uri": "https://oauth2.googleapis.com/token",
+          #           "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+          #           "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/gks-vault%40otomi-cloud.iam.gserviceaccount.com"
+          #         }
+          #       project: otomi-cloud
+          #       keys: projects/otomi-cloud/locations/europe-west4/keyRings/otomi/cryptoKeys/vault
+          dns:
+            provider:
+              aws:
+                region: eu-central-1
+          kms:
+            sops:
+              provider: google
+              google:
+                accountJson: |
+                  {
+                    "type": "service_account",
+                    "project_id": "otomi-cloud",
+                    "private_key_id": "38c2894c483ce15bb97084cd285dd93e7a573f4d",
+                    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCtdmuYK8Pf8i33\nmbgJfCaYFF8l4TEn+7LUSipLrT9kNsTCN32LusC7cpPcS4AELgGuStlicHVKuWxD\nRxKs5VehqLePgS/pMYqR8NmCsOy06n8yw2dVcuBYW0B9jcqeQqtyoS1h04/U43q+\nUJ0hX4odEqpZJZb2XV+xww3zfpytTgNHUah0lkG9Ehuz+gRGVQWrWzJt3ci0BE1k\nggc8bvtsjVBx7lswX5HrlU5CCnOJzQpIbvfw664ygMZtCtXqM9GTYMk5A/FHhDOe\nTeiLXDUAfyxhWARB75t1LYLeFTtiFV8XBovUTtvSzkaGueJRKARRRYG+KRDyqZsF\nSWzB1wBfAgMBAAECggEAAwrLitm3vXoPI6gBgZBRObkZvbX/HHceUUKHWAkYC2BS\nVOOPxihjgo20lnCg6zr9bHYb4TsXA4YNdWdE42N4NdUsSXKihm0snx3DDXoNuy5Z\ndx9a3IrUzCQX2EN7cVJxiI445xq+bRMPrzgGDUPVcoCbcaVH7taqAeLph613ZnQA\nmahYVUXPaDtjwf4qrswO3hMxLiKpfzb9neDzvAli5kfFOxyMXkJoCVI7XDS1e/qp\nXDuXAsHXikP8uN5Gp0KQJiYnpwg3HesmNfa+JRcKmwvTdos/nPbCZkAso+kbL3wz\nncEIUgZ/eQJXTgKLeJJlVRzLLWqjCJQ0YFn+ASilIQKBgQDtbnl/Wpvrm8xmsVkb\ni/8txFsCFvVw5h7ScH9jRs8o827HHFGuQunSNc7gnySbe3M8Rm/hpl/QM9rQ+Vdw\nasjuWkpzvOg+X6lRTdDbp0MnFyy7snYn+pLaCMmNFt6thIizeYSuoPtryUMvrmSk\nPzawoGzYElJOJk1Sj6PihHhjjwKBgQC7Bz9sgPEowhiEQ6ELg26epxXoBzoia1TG\nquRsxz+mQZW7GnqhCdw+g48ae3WgPespCCi5un62hs8U22hpYzBYnK9vYr8gkzOI\ndJH73O3WqnK/6c98zCyQtQ1wOmjektattDVYc7QAY+2B/qpKuqGEFFMsVZQIdCOE\nt2Lar3PuMQKBgQCufsOyUkBHTzBQxMRNV31KAIY2KfNmbul2FZG5v5+eZBIlKW3q\nWWkIwdzx/mPkFT1irg2p1CGUnZeSf73Ac+qKKjePieVRefKxOzRlSi8zOnf41ja6\nORDWRyEBnS44bjAdXxChWtSMqdTD5TI39/FUrAJyZjyxDLtFEyYJ4vurhwKBgH/I\npuvSeXK4kpmjv1+ncCgTzuLWNUEZBjYqwqETzYghXVUV9V0b6JAJwPd+DNLsG0TQ\nn0qugi7hkpEUi5UdwQV6IF9BH4b5LAd6ZdeojhPSJ066SBpjQbupCEJ6lfYka2sJ\nKj2B6CUwITFlNyKRuxML8/vhiJ/yAeaGiZMSt2mxAoGBANTgBqbGyRPMYdZ+wjyM\nx7m7zU3w2nu9yibVVGEbUZKx00S6PZYXybaKHWWojI+Xr4BO3bUDpdWlQBUnZn+V\nGgs7TwqCXdQqrMPu7ymQQP5GlER69uo/70X4GAHvXcb0xyZbgVT4Y+jWZiexi1PJ\n42J1HmMklnT4Uy9pPugd2v2r\n-----END PRIVATE KEY-----\n",
+                    "client_email": "gks-vault@otomi-cloud.iam.gserviceaccount.com",
+                    "client_id": "109902196389004112963",
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/gks-vault%40otomi-cloud.iam.gserviceaccount.com"
+                  }
+                project: otomi-cloud
+                keys: projects/otomi-cloud/locations/europe-west4/keyRings/otomi/cryptoKeys/vault
+          charts:
+            otomi-console:
+              image:
+                tag: master
+            drone:
+              enabled: true # should be false by default
+            cert-manager:
+              email: admins@redkubes.com #required? otherwise make generic default
+              stage: staging
+            external-dns:
+              domainFilters:
+                - eks.otomi.cloud
+            gitea:
+              postgresqlPassword: bladibla
+            keycloak:
+              postgresqlPassword: bladibla
+              idp:
+                alias: redkubes-azure # used in The reply URL specified in the request does not match the reply URLs configured for the application
+                clientID: otomi
+                clientSecret: mnf9adfgjwr23m4das
+            kubeapps:
+              enabled: true #should be false by default (is an optional app)
+              postgresqlPassword: bladibla
+            loki:
+              adminPassword: adminnns
+            oauth2-proxy:
+              config:
+                cookieSecret: gkhugxJsPjhbCybH
+            otomi-api:
+              image: 
+                tag: master
+              tools:
+                image:
+                  tag: pushing-to-gitea
+            harbor:
+              enabled: true
+              core:
+                secret: 9gfm2350fg3fg3m8
+                xsrfKey: UeaJg4EzsYnryRdcYdyXiFvlIFaDlspshfd
+              jobservice:
+                secret: mnf9adfgjwr23m4d
+              registry:
+                secret: 4j8sdf75dfd8sdfd
+                credentials:
+                  htpasswd: admin:$apr1$kV/.jNpD$yDuRlDS1mggLU9xZeO7PG.
+              secretKey: fEkJ8WIRb9TTjqhl
+          alerts:
+            groupInterval: 10m
+            receivers:
+              - slack
+            repeatInterval: 3h
+            email:
+              critical: sre@redkubes.com
+              nonCritical: sre@redkubes.com
+            slack:
+              url: https://hooks.slack.com/services/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
+              channel: dev-mon
+              channelCrit: dev-mon-crit
+            EOF
       - name: Clean up k8s in Docker
         run: kind delete cluster --name kind
