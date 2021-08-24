@@ -48,7 +48,7 @@ jobs:
           chmod +r $KUBECONFIG
 
           mkdir -p ./env/env
-          cp -r ./tests/fixtures/env/ ./env/
+          cp -r ./kind/env/ ./env/
 
           npm set-script prepare "" && \
             npm ci && \
