@@ -27,7 +27,7 @@ alias kp="k proxy &"
 
 function kint() {
   [ $(act --version | cut -d " " -f 3) = "0.2.24" ] && \
-    act -W ./.github/workflows/integration.yml --rm 
+    act -W ./.github/workflows/integration.yml --rm
 }
 
 function kpo() {

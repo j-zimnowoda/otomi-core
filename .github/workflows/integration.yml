@@ -27,22 +27,25 @@ jobs:
         with:
           token: ${{ env.GIT_PASSWORD }}
       - run: helm plugin install https://github.com/databus23/helm-diff
+        continue-on-error: true
       # Important info: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#docker-container-filesystem
       - name: K8s in Docker
         continue-on-error: true
         run: |
           export PATH=$PATH:/home/app/tools
-          export KUBECONFIG=$HOME/.kube/config
+          export KUBECONFIG=$PWD/kind/kubeconfig
           export KIND_EXPERIMENTAL_DOCKER_NETWORK=${{ job.container.network }}
 
           kind create cluster \
             --name kind \
             --kubeconfig $KUBECONFIG \
             --image kindest/node:${{ env.KIND_TAG }} \
-            --config=./kind-config.yaml
+            --config=./kind/config.yaml
 
           [ -n "$KIND_EXPERIMENTAL_DOCKER_NETWORK" ] && \
             kubectl config set-cluster kind-kind --server=https://kind-control-plane:6443
+
+          chmod +r $KUBECONFIG
 
           mkdir -p ./env/env
           cp -r ./tests/fixtures/env/ ./env/
