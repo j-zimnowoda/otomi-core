@@ -54,5 +54,3 @@ jobs:
             npm ci && \
             npm run compile && \
             /usr/bin/node --experimental-specifier-resolution=node ./dist/otomi.js -- apply
-      - name: Clean up k8s in Docker
-        run: kind delete cluster --name kind
