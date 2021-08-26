@@ -2007,15 +2007,10 @@ properties:
                 const: vault
               vault:
                 properties:
-                  keys:
-                    description: Comma separated list of one or two paths to keys as defined in Vault. One if used for both enc+dec. Two if one for enc, other for dec.
-                    title: Vault keys
-                    type: string
                   token:
                     type: string
                     x-secret: true
                 required:
-                  - keys
                   - token
             required:
               - vault

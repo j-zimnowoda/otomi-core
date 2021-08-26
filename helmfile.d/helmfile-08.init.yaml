@@ -27,4 +27,11 @@ releases:
     installed: {{ eq $v.cluster.provider "onprem" | ternary false ($v | get "charts.cluster-overprovisioner.enabled" true) }}
     namespace: overprovisioner
     <<: *default
+  - name: job-vault-ca
+    installed: {{ eq $v.cluster.provider "kind" }}
+    namespace: vault
+    labels:
+      pkg: vault
+      group: jobs
+    <<: *jobs
 

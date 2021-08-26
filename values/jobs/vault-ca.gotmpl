@@ -1,0 +1,15 @@
+{{- $v := .Values -}}
+{{- $c := $v.charts -}}
+
+type: Job
+description: |
+  https://learn.hashicorp.com/tutorials/vault/pki-engine
+  Use Vault to create certificates
+image:
+  repository: vault
+  tag: '1.8.1'
+  pullPolicy: IfNotPresent
+name: vault-ca
+script: |
+  {{- readFile "scripts/vault-ca.sh" | nindent 6 }}
+runPolicy: Always
