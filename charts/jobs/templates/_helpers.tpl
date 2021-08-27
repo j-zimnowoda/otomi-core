@@ -133,7 +133,15 @@ template:
             name: {{ print $.Release.Name $initSuffix | trunc 63 | trimSuffix "-" }}
         {{- end }}
       {{- end }}
-      {{- with $c.secrets }}
+      {{- if eq $.Release.Name "job-vault-ca" }}
+        env:
+          - name: VAULT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: vault-unseal-keys
+                key: vault-root
+      {{- else }}
+        {{- with $c.secrets }}
         env:
         {{- range $secretName := . }}
           {{- $secret := index $teamSecrets $secretName }}
@@ -143,6 +151,7 @@ template:
               secretKeyRef:
                 name: {{ $secretName }}
                 key: {{ $entry }}
+            {{- end }}
           {{- end }}
         {{- end }}
       {{- end }}

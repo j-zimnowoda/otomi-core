@@ -30,8 +30,9 @@ releases:
   - name: job-vault-ca
     installed: {{ eq $v.cluster.provider "kind" }}
     namespace: vault
+    chart: ../charts/jobs
     labels:
       pkg: vault
       group: jobs
-    <<: *jobs
-
+    values:
+      - ../values/jobs/vault-ca.gotmpl
