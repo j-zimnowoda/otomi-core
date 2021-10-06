@@ -145,7 +145,7 @@ export const bootstrapValues = async (): Promise<void> => {
     originalValues = getInputValues() as Record<string, any>
     // store chart input values, so they can be merged with gerenerated passwords
     await writeValues(originalValues)
-    generatedSecrets = getOtomiSecrets(originalValues)
+    generatedSecrets = await getOtomiSecrets(originalValues)
   } else {
     originalValues = await hfValuesOrEmpty(true)
     generatedSecrets = await generateSecrets(originalValues)
