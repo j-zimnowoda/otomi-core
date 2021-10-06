@@ -174,7 +174,7 @@ export const bootstrapValues = async (): Promise<void> => {
   }
   if (isChart) {
     const updatedValues = await hfValuesOrEmpty(true)
-    k8sRecreateOtomiAdminPassword(updatedValues)
+    await k8sRecreateOtomiAdminPassword(updatedValues)
   }
 
   if (existsSync(`${env.ENV_DIR}/.sops.yaml`)) {
