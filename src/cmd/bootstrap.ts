@@ -150,6 +150,7 @@ export const bootstrapValues = async (): Promise<void> => {
     originalValues = await hfValuesOrEmpty(true)
     generatedSecrets = await generateSecrets(originalValues)
   }
+
   // Ensure that .dec files are in place, because the writeValues() relies on them.
   await genSops()
   if (existsSync(`${env.ENV_DIR}/.sops.yaml`) && existsSync(`${env.ENV_DIR}/.secrets`)) {
@@ -158,6 +159,7 @@ export const bootstrapValues = async (): Promise<void> => {
   }
   await writeValues(generatedSecrets, false)
 
+  console.log(JSON.stringify(await hfValues()))
   try {
     // Do not validate if CLI just bootstraps originalValues with placeholders
     if (!isEmpty(originalValues)) await validateValues()
